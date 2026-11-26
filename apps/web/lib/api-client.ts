@@ -1,5 +1,15 @@
 import { APP_CONFIG } from "@agentvoice/config";
-import type { ApiResponse, HealthData, SystemStatusData } from "@agentvoice/shared-types";
+import type {
+  Agent,
+  AgentCreatePayload,
+  AgentStatus,
+  AgentTemplate,
+  AgentType,
+  AgentUpdatePayload,
+  ApiResponse,
+  HealthData,
+  SystemStatusData,
+} from "@agentvoice/shared-types";
 
 export const API_BASE_URL =
   process.env.NEXT_PUBLIC_API_URL?.replace(/\/$/, "") || APP_CONFIG.defaultApiUrl;
@@ -54,4 +64,66 @@ export function fetchHealth(): Promise<HealthData> {
 
 export function fetchSystemStatus(): Promise<SystemStatusData> {
   return apiFetch<SystemStatusData>("/api/v1/system/status");
+}
+
+export interface AgentListFilters {
+  search?: string;
+  status?: AgentStatus | "";
+  type?: AgentType | "";
+}
+
+export function fetchAgents(filters?: AgentListFilters): Promise<Agent[]> {
+  const params = new URLSearchParams();
+  if (filters?.search?.trim()) params.set("search", filters.search.trim());
+  if (filters?.status) params.set("status", filters.status);
+  if (filters?.type) params.set("type", filters.type);
+  const qs = params.toString();
+  return apiFetch<Agent[]>(`/api/v1/agents${qs ? `?${qs}` : ""}`);
+}
+
+export function fetchAgent(agentId: string): Promise<Agent> {
+  return apiFetch<Agent>(`/api/v1/agents/${encodeURIComponent(agentId)}`);
+}
+
+export function fetchAgentTemplates(): Promise<AgentTemplate[]> {
+  return apiFetch<AgentTemplate[]>("/api/v1/agents/templates");
+}
+
+export function createAgent(payload: AgentCreatePayload): Promise<Agent> {
+  return apiFetch<Agent>("/api/v1/agents", {
+    method: "POST",
+    body: JSON.stringify(payload),
+  });
+}
+
+export function updateAgent(agentId: string, payload: AgentUpdatePayload): Promise<Agent> {
+  return apiFetch<Agent>(`/api/v1/agents/${encodeURIComponent(agentId)}`, {
+    method: "PUT",
+    body: JSON.stringify(payload),
+  });
+}
+
+export function deleteAgent(agentId: string): Promise<{ deleted: boolean; id: string }> {
+  return apiFetch<{ deleted: boolean; id: string }>(
+    `/api/v1/agents/${encodeURIComponent(agentId)}`,
+    { method: "DELETE" },
+  );
+}
+
+export function duplicateAgent(agentId: string): Promise<Agent> {
+  return apiFetch<Agent>(`/api/v1/agents/${encodeURIComponent(agentId)}/duplicate`, {
+    method: "POST",
+  });
+}
+
+export function activateAgent(agentId: string): Promise<Agent> {
+  return apiFetch<Agent>(`/api/v1/agents/${encodeURIComponent(agentId)}/activate`, {
+    method: "POST",
+  });
+}
+
+export function deactivateAgent(agentId: string): Promise<Agent> {
+  return apiFetch<Agent>(`/api/v1/agents/${encodeURIComponent(agentId)}/deactivate`, {
+    method: "POST",
+  });
 }

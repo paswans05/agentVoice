@@ -28,7 +28,7 @@ export const SIDEBAR_NAV_ITEMS: NavItemConfig[] = [
     label: "AI Agents",
     href: "/agents",
     phase: 2,
-    status: "planned",
+    status: "active",
     description: "Create and configure local voice AI agents",
   },
   {

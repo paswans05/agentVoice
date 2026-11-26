@@ -58,3 +58,103 @@ export interface SystemStatusData {
     phase_name: string;
   };
 }
+
+export type AgentStatus = "DRAFT" | "ACTIVE" | "INACTIVE";
+
+export type AgentType =
+  | "SALES"
+  | "CUSTOMER_SUPPORT"
+  | "LEAD_QUALIFICATION"
+  | "APPOINTMENT_BOOKING"
+  | "GENERAL_ASSISTANT"
+  | "CUSTOM";
+
+export type PersonalityTone =
+  | "FRIENDLY"
+  | "PROFESSIONAL"
+  | "FORMAL"
+  | "CASUAL"
+  | "CONFIDENT"
+  | "EMPATHETIC"
+  | "CUSTOM";
+
+export type LanguageResponseMode = "AUTO" | "PRIMARY" | "FIXED";
+
+export type SupportedLocale = "hi-IN" | "en-IN";
+
+export interface PersonalityConfig {
+  tone: PersonalityTone;
+  traits: string[];
+  custom_instructions: string;
+}
+
+export interface InstructionConfig {
+  system_prompt: string;
+  greeting: string;
+  additional_rules: string[];
+}
+
+export interface LanguageConfig {
+  primary_language: SupportedLocale;
+  supported_languages: SupportedLocale[];
+  hinglish_enabled: boolean;
+  response_mode: LanguageResponseMode;
+}
+
+export interface VoiceConfig {
+  provider: string;
+  voice_id: string;
+  speed: number;
+  pitch: number;
+}
+
+export interface Agent {
+  id: string;
+  name: string;
+  description: string;
+  avatar: string;
+  type: AgentType;
+  status: AgentStatus;
+  personality: PersonalityConfig;
+  instructions: InstructionConfig;
+  language: LanguageConfig;
+  voice: VoiceConfig;
+  created_at: string;
+  updated_at: string;
+  version: number;
+}
+
+export interface AgentCreatePayload {
+  name: string;
+  description: string;
+  avatar: string;
+  type: AgentType;
+  template_id?: string | null;
+  personality: PersonalityConfig;
+  instructions: InstructionConfig;
+  language: LanguageConfig;
+  voice: VoiceConfig;
+}
+
+export interface AgentUpdatePayload {
+  name: string;
+  description: string;
+  avatar: string;
+  type: AgentType;
+  personality: PersonalityConfig;
+  instructions: InstructionConfig;
+  language: LanguageConfig;
+  voice: VoiceConfig;
+}
+
+export interface AgentTemplate {
+  id: string;
+  name: string;
+  description: string;
+  avatar: string;
+  type: AgentType;
+  personality: PersonalityConfig;
+  instructions: InstructionConfig;
+  language: LanguageConfig;
+  voice: VoiceConfig;
+}
