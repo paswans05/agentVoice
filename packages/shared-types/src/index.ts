@@ -445,3 +445,160 @@ export interface RAGSettings {
   max_context_tokens: number;
   max_file_size_mb: number;
 }
+
+export type LeadStatus =
+  | "NEW"
+  | "CONTACTED"
+  | "QUALIFIED"
+  | "UNQUALIFIED"
+  | "INTERESTED"
+  | "NOT_INTERESTED"
+  | "FOLLOW_UP"
+  | "CONVERTED"
+  | "LOST"
+  | "DO_NOT_CONTACT";
+
+export type LeadPriority = "LOW" | "MEDIUM" | "HIGH" | "URGENT";
+
+export type ConsentStatus =
+  | "UNKNOWN"
+  | "PENDING"
+  | "GRANTED"
+  | "DENIED"
+  | "REVOKED"
+  | "EXPIRED";
+
+export type ConsentChannel =
+  | "PHONE"
+  | "SMS"
+  | "EMAIL"
+  | "WHATSAPP"
+  | "WEB"
+  | "IN_PERSON"
+  | "OTHER";
+
+export interface Lead {
+  id: string;
+  first_name: string;
+  last_name: string;
+  full_name: string;
+  email: string | null;
+  phone: string | null;
+  normalized_phone: string | null;
+  alternate_phone: string | null;
+  company: string;
+  job_title: string;
+  website: string;
+  country: string;
+  state: string;
+  city: string;
+  address: string;
+  source: string;
+  status: LeadStatus;
+  priority: LeadPriority;
+  assigned_agent_id: string | null;
+  group_ids: string[];
+  tags: string[];
+  notes: string;
+  custom_fields: Record<string, unknown>;
+  consent_status: ConsentStatus;
+  suppressed: boolean;
+  created_at: string;
+  updated_at: string;
+  last_contacted_at: string | null;
+  next_follow_up_at: string | null;
+}
+
+export interface LeadListResponse {
+  items: Lead[];
+  total: number;
+  page: number;
+  page_size: number;
+  total_pages: number;
+}
+
+export interface LeadDashboardStats {
+  total_leads: number;
+  new_leads: number;
+  qualified_leads: number;
+  interested_leads: number;
+  follow_up_leads: number;
+  converted_leads: number;
+  suppressed_contacts: number;
+}
+
+export interface LeadGroup {
+  id: string;
+  name: string;
+  description: string;
+  color: string;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface ConsentRecord {
+  id: string;
+  lead_id: string;
+  consent_status: ConsentStatus;
+  consent_type: string;
+  purpose: string;
+  channel: ConsentChannel;
+  source: string;
+  captured_at: string | null;
+  revoked_at: string | null;
+  revocation_reason: string;
+  created_at: string;
+}
+
+export interface SuppressionRecord {
+  id: string;
+  lead_id: string | null;
+  phone: string | null;
+  email: string | null;
+  channel: string;
+  reason: string;
+  source: string;
+  created_at: string;
+  revoked_at: string | null;
+}
+
+export interface LeadActivity {
+  activity_id: string;
+  lead_id: string;
+  activity_type: string;
+  description: string;
+  actor: string;
+  timestamp: string;
+}
+
+export interface EligibilityResult {
+  lead_id: string;
+  channel: ConsentChannel;
+  purpose: string;
+  eligible: boolean;
+  blocked: boolean;
+  reason: string;
+  applicable_consent_status: ConsentStatus;
+  suppression_status: boolean;
+}
+
+export interface CSVImportPreviewResponse {
+  job_id: string;
+  filename: string;
+  headers: string[];
+  total_rows: number;
+  sample_rows: Record<string, string>[];
+  suggested_mapping: Record<string, string>;
+}
+
+export interface CSVImportResult {
+  job_id: string;
+  total_rows: number;
+  imported_count: number;
+  skipped_count: number;
+  duplicate_count: number;
+  invalid_count: number;
+  updated_count: number;
+  errors: { row_number: number; message: string }[];
+  warnings: string[];
+}

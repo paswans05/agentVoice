@@ -8,10 +8,23 @@ import type {
   AgentUpdatePayload,
   ApiResponse,
   AudioSettings,
+  ConsentChannel,
+  ConsentRecord,
+  ConsentStatus,
   Conversation,
+  CSVImportPreviewResponse,
+  CSVImportResult,
+  EligibilityResult,
   HealthData,
   KnowledgeBase,
   KnowledgeDocument,
+  Lead,
+  LeadActivity,
+  LeadDashboardStats,
+  LeadGroup,
+  LeadListResponse,
+  LeadPriority,
+  LeadStatus,
   LLMRuntimeHealth,
   ModelPullTask,
   ModelsOverview,
@@ -20,6 +33,7 @@ import type {
   SpeechRuntimeHealth,
   StreamEvent,
   STTModelInfo,
+  SuppressionRecord,
   SystemStatusData,
   TTSVoiceInfo,
   VoiceSessionInfo,
@@ -441,4 +455,217 @@ export function updateRAGSettings(payload: RAGSettings): Promise<RAGSettings> {
     method: "PUT",
     body: JSON.stringify(payload),
   });
+}
+
+// --- Phase 7: Leads Management ---
+
+export interface LeadListFilters {
+  search?: string;
+  status?: LeadStatus | "";
+  priority?: LeadPriority | "";
+  assigned_agent_id?: string;
+  group_id?: string;
+  consent_status?: ConsentStatus | "";
+  page?: number;
+  page_size?: number;
+}
+
+export function fetchLeadStats(): Promise<LeadDashboardStats> {
+  return apiFetch<LeadDashboardStats>("/api/v1/leads/stats");
+}
+
+export function fetchLeads(filters?: LeadListFilters): Promise<LeadListResponse> {
+  const params = new URLSearchParams();
+  if (filters?.search?.trim()) params.set("search", filters.search.trim());
+  if (filters?.status) params.set("status", filters.status);
+  if (filters?.priority) params.set("priority", filters.priority);
+  if (filters?.assigned_agent_id) params.set("assigned_agent_id", filters.assigned_agent_id);
+  if (filters?.group_id) params.set("group_id", filters.group_id);
+  if (filters?.consent_status) params.set("consent_status", filters.consent_status);
+  if (filters?.page) params.set("page", String(filters.page));
+  if (filters?.page_size) params.set("page_size", String(filters.page_size));
+  const qs = params.toString();
+  return apiFetch<LeadListResponse>(`/api/v1/leads${qs ? `?${qs}` : ""}`);
+}
+
+export function fetchLead(leadId: string): Promise<Lead> {
+  return apiFetch<Lead>(`/api/v1/leads/${encodeURIComponent(leadId)}`);
+}
+
+export function createLead(payload: Partial<Lead>): Promise<Lead> {
+  return apiFetch<Lead>("/api/v1/leads", {
+    method: "POST",
+    body: JSON.stringify(payload),
+  });
+}
+
+export function updateLead(leadId: string, payload: Partial<Lead>): Promise<Lead> {
+  return apiFetch<Lead>(`/api/v1/leads/${encodeURIComponent(leadId)}`, {
+    method: "PUT",
+    body: JSON.stringify(payload),
+  });
+}
+
+export function deleteLead(leadId: string): Promise<{ deleted: boolean; id: string }> {
+  return apiFetch<{ deleted: boolean; id: string }>(
+    `/api/v1/leads/${encodeURIComponent(leadId)}`,
+    { method: "DELETE" },
+  );
+}
+
+export function bulkDeleteLeads(leadIds: string[]): Promise<{ deleted_count: number }> {
+  return apiFetch<{ deleted_count: number }>("/api/v1/leads/bulk-delete", {
+    method: "POST",
+    body: JSON.stringify({ lead_ids: leadIds }),
+  });
+}
+
+export function bulkUpdateLeads(payload: {
+  lead_ids: string[];
+  status?: LeadStatus;
+  priority?: LeadPriority;
+}): Promise<{ updated_count: number }> {
+  return apiFetch<{ updated_count: number }>("/api/v1/leads/bulk-update", {
+    method: "POST",
+    body: JSON.stringify(payload),
+  });
+}
+
+export function assignAgentToLead(leadId: string, agentId: string): Promise<Lead> {
+  return apiFetch<Lead>(
+    `/api/v1/leads/${encodeURIComponent(leadId)}/assign-agent?agent_id=${encodeURIComponent(agentId)}`,
+    { method: "POST" },
+  );
+}
+
+export function unassignAgentFromLead(leadId: string): Promise<Lead> {
+  return apiFetch<Lead>(`/api/v1/leads/${encodeURIComponent(leadId)}/assign-agent`, {
+    method: "DELETE",
+  });
+}
+
+export function fetchLeadConsent(leadId: string): Promise<ConsentRecord[]> {
+  return apiFetch<ConsentRecord[]>(`/api/v1/leads/${encodeURIComponent(leadId)}/consent`);
+}
+
+export function grantLeadConsent(
+  leadId: string,
+  payload: { channel: ConsentChannel; purpose: string; source: string; consent_status?: ConsentStatus },
+): Promise<ConsentRecord> {
+  return apiFetch<ConsentRecord>(`/api/v1/leads/${encodeURIComponent(leadId)}/consent`, {
+    method: "POST",
+    body: JSON.stringify(payload),
+  });
+}
+
+export function revokeLeadConsent(
+  leadId: string,
+  payload: { channel: ConsentChannel; purpose: string; reason: string },
+): Promise<ConsentRecord> {
+  return apiFetch<ConsentRecord>(`/api/v1/leads/${encodeURIComponent(leadId)}/consent/revoke`, {
+    method: "POST",
+    body: JSON.stringify(payload),
+  });
+}
+
+export function fetchLeadEligibility(
+  leadId: string,
+  channel: ConsentChannel = "PHONE",
+  purpose = "PRODUCT_INFORMATION",
+): Promise<EligibilityResult> {
+  return apiFetch<EligibilityResult>(
+    `/api/v1/leads/${encodeURIComponent(leadId)}/eligibility?channel=${channel}&purpose=${encodeURIComponent(purpose)}`,
+  );
+}
+
+export function fetchLeadActivities(leadId: string): Promise<LeadActivity[]> {
+  return apiFetch<LeadActivity[]>(`/api/v1/leads/${encodeURIComponent(leadId)}/activities`);
+}
+
+export function fetchLeadGroups(): Promise<LeadGroup[]> {
+  return apiFetch<LeadGroup[]>("/api/v1/lead-groups");
+}
+
+export function createLeadGroup(payload: {
+  name: string;
+  description: string;
+  color?: string;
+}): Promise<LeadGroup> {
+  return apiFetch<LeadGroup>("/api/v1/lead-groups", {
+    method: "POST",
+    body: JSON.stringify(payload),
+  });
+}
+
+export function deleteLeadGroup(groupId: string): Promise<{ deleted: boolean; id: string }> {
+  return apiFetch<{ deleted: boolean; id: string }>(
+    `/api/v1/lead-groups/${encodeURIComponent(groupId)}`,
+    { method: "DELETE" },
+  );
+}
+
+export function fetchSuppressionList(search?: string): Promise<SuppressionRecord[]> {
+  const qs = search?.trim() ? `?search=${encodeURIComponent(search.trim())}` : "";
+  return apiFetch<SuppressionRecord[]>(`/api/v1/suppression-list${qs}`);
+}
+
+export function addSuppressionRecord(payload: {
+  lead_id?: string;
+  phone?: string;
+  email?: string;
+  reason: string;
+}): Promise<SuppressionRecord> {
+  return apiFetch<SuppressionRecord>("/api/v1/suppression-list", {
+    method: "POST",
+    body: JSON.stringify(payload),
+  });
+}
+
+export function revokeSuppressionRecord(recordId: string): Promise<SuppressionRecord> {
+  return apiFetch<SuppressionRecord>(
+    `/api/v1/suppression-list/${encodeURIComponent(recordId)}`,
+    { method: "DELETE" },
+  );
+}
+
+export async function previewCSVImport(file: File): Promise<CSVImportPreviewResponse> {
+  const form = new FormData();
+  form.append("file", file);
+  const res = await fetch(`${API_BASE_URL}/api/v1/leads/import/preview`, {
+    method: "POST",
+    body: form,
+  });
+  const payload = (await res.json()) as ApiResponse<CSVImportPreviewResponse>;
+  if (!res.ok || !payload.success || !payload.data) {
+    throw new ApiClientError(payload.error?.message ?? "CSV preview failed", "CSV_ERROR", res.status);
+  }
+  return payload.data;
+}
+
+export function executeCSVImport(payload: {
+  job_id: string;
+  column_mapping: Record<string, string>;
+  duplicate_strategy: "SKIP" | "UPDATE_EXISTING" | "IMPORT_AS_NEW";
+  match_strategy: "EMAIL" | "PHONE" | "EMAIL_OR_PHONE";
+}): Promise<CSVImportResult> {
+  return apiFetch<CSVImportResult>("/api/v1/leads/import/execute", {
+    method: "POST",
+    body: JSON.stringify(payload),
+  });
+}
+
+export async function exportLeadsCSV(payload: {
+  lead_ids?: string[];
+  status?: LeadStatus;
+  include_consent?: boolean;
+}): Promise<Blob> {
+  const res = await fetch(`${API_BASE_URL}/api/v1/leads/export`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(payload),
+  });
+  if (!res.ok) {
+    throw new ApiClientError("Failed to export CSV", "EXPORT_ERROR", res.status);
+  }
+  return res.blob();
 }

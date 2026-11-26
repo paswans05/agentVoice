@@ -6,6 +6,9 @@ const nextConfig: NextConfig = {
     "@agentvoice/config",
     "@agentvoice/ui",
   ],
+  experimental: {
+    webpackBuildWorker: false,
+  },
 };
 
 export default nextConfig;

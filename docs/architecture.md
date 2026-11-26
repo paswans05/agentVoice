@@ -72,7 +72,15 @@ See [docs/voice-engine.md](voice-engine.md) for setup and protocol details.
 
 See [docs/knowledge-base.md](knowledge-base.md) for setup and API details.
 
-## 7. Upcoming Phases
+## 7. Phase 7 — Leads Management (Implemented)
+
+- **Note**: Phase 6 (Sales Agent Intelligence) is deferred; Phase 7 depends only on Phases 1–2.
+- **Leads, Groups, Consent & Suppression (`apps/api/app/services/lead_service.py`, `consent_service.py`, `suppression_service.py`, `lead_csv_service.py`)**: Local JSON/JSONL persistence via `StorageProvider`, channel/purpose-scoped consent, phone/email suppression list surviving lead deletion, `LeadEligibilityService`, and formula-safe UTF-8 CSV import/export.
+- **Frontend (`apps/web/app/leads/*`)**: Leads Dashboard & paginated table (`/leads`), Create Lead (`/leads/new`), Lead Details with Consent/Eligibility/Timeline (`/leads/[id]`), CSV Import Wizard (`/leads/import`), Groups (`/leads/groups`), and Suppression List (`/leads/suppression`).
+
+See [docs/leads.md](leads.md) for details.
+
+## 8. Upcoming Phases
 
 - **Phase 3 — Local AI Integration**: Ollama adapter implementing `LLMProvider`, model health/listing, streaming conversation API.
 - **Phase 4 — Speech Integration**: Local STT (`faster-whisper`), TTS (`Piper`), VAD (`Silero VAD`), WebSocket audio streaming.

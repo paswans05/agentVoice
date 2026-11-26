@@ -60,7 +60,7 @@ export const SIDEBAR_NAV_ITEMS: NavItemConfig[] = [
     label: "Leads",
     href: "/leads",
     phase: 7,
-    status: "planned",
+    status: "active",
     description: "Manage contacts, CSV import/export, and consent",
   },
   {
