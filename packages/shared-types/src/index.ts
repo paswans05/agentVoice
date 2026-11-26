@@ -108,6 +108,14 @@ export interface VoiceConfig {
   pitch: number;
 }
 
+export interface ModelConfig {
+  provider: string;
+  model_id: string;
+  temperature: number;
+  max_tokens: number;
+  context_window_messages: number;
+}
+
 export interface Agent {
   id: string;
   name: string;
@@ -119,6 +127,7 @@ export interface Agent {
   instructions: InstructionConfig;
   language: LanguageConfig;
   voice: VoiceConfig;
+  model?: ModelConfig;
   created_at: string;
   updated_at: string;
   version: number;
@@ -134,6 +143,7 @@ export interface AgentCreatePayload {
   instructions: InstructionConfig;
   language: LanguageConfig;
   voice: VoiceConfig;
+  model?: ModelConfig;
 }
 
 export interface AgentUpdatePayload {
@@ -145,6 +155,7 @@ export interface AgentUpdatePayload {
   instructions: InstructionConfig;
   language: LanguageConfig;
   voice: VoiceConfig;
+  model?: ModelConfig;
 }
 
 export interface AgentTemplate {
@@ -157,4 +168,88 @@ export interface AgentTemplate {
   instructions: InstructionConfig;
   language: LanguageConfig;
   voice: VoiceConfig;
+  model?: ModelConfig;
 }
+
+export type ModelStatus = "AVAILABLE" | "DOWNLOADING" | "INSTALLED" | "ERROR" | "UNKNOWN";
+
+export interface LLMRuntimeHealth {
+  provider: string;
+  available: boolean;
+  endpoint: string;
+  version: string | null;
+  error: string | null;
+  checked_at: string;
+}
+
+export interface LLMModelInfo {
+  id: string;
+  name: string;
+  provider: string;
+  status: ModelStatus;
+  size_bytes: number | null;
+  family: string | null;
+  parameter_size: string | null;
+  quantization: string | null;
+  modified_at: string | null;
+  is_default: boolean;
+}
+
+export interface ModelRecommendation {
+  id: string;
+  name: string;
+  approximate_size: string;
+  min_ram_gb: number;
+  quantization: string;
+  language_notes: string;
+  performance_notes: string;
+}
+
+export interface ModelPullTask {
+  task_id: string;
+  model_id: string;
+  status: "DOWNLOADING" | "COMPLETED" | "CANCELLED" | "ERROR";
+  progress_percent: number;
+  completed_bytes: number;
+  total_bytes: number;
+  status_text: string;
+  error: string | null;
+  updated_at: string;
+}
+
+export interface ModelsOverview {
+  runtime: LLMRuntimeHealth;
+  installed: LLMModelInfo[];
+  default_model_id: string | null;
+  recommendations: ModelRecommendation[];
+}
+
+export interface ChatMessage {
+  role: "system" | "user" | "assistant";
+  content: string;
+  timestamp: string;
+  model_id?: string | null;
+  duration_ms?: number | null;
+}
+
+export interface Conversation {
+  id: string;
+  agent_id: string;
+  model_id: string;
+  title: string;
+  messages: ChatMessage[];
+  created_at: string;
+  updated_at: string;
+}
+
+export type StreamEvent =
+  | { event: "meta"; conversation_id: string; model_id: string }
+  | { event: "delta"; content: string }
+  | {
+      event: "done";
+      conversation_id: string;
+      model_id: string;
+      duration_ms: number;
+      message: ChatMessage;
+    }
+  | { event: "error"; message: string };

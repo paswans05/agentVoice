@@ -67,6 +67,7 @@ class AgentService:
         instructions = payload.instructions
         language = payload.language
         voice = payload.voice
+        model = payload.model
         avatar = payload.avatar
         agent_type = payload.type
 
@@ -101,6 +102,7 @@ class AgentService:
             instructions=instructions,
             language=language,
             voice=voice,
+            model=model,
             created_at=now,
             updated_at=now,
             version=1,
@@ -130,6 +132,7 @@ class AgentService:
                 "instructions": payload.instructions,
                 "language": language,
                 "voice": payload.voice,
+                "model": payload.model,
             }
         )
 

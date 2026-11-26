@@ -1,6 +1,6 @@
 "use client";
 
-import { ArrowLeft, Copy, Edit, Power, PowerOff, Trash2 } from "lucide-react";
+import { ArrowLeft, Copy, Edit, MessageSquare, Power, PowerOff, Trash2 } from "lucide-react";
 import Link from "next/link";
 import { useParams, useRouter } from "next/navigation";
 import { useState } from "react";
@@ -129,6 +129,13 @@ export default function AgentDetailsPage() {
         </div>
 
         <div className="flex flex-wrap items-center gap-2">
+          <Link
+            href={`/agents/${agent.id}/playground`}
+            className="inline-flex items-center gap-1.5 rounded-lg border border-primary/40 bg-primary/10 px-3 py-2 text-xs font-medium text-primary hover:bg-primary/20"
+          >
+            <MessageSquare className="h-3.5 w-3.5" />
+            Test in Playground
+          </Link>
           <Link
             href={`/agents/${agent.id}/edit`}
             className="inline-flex items-center gap-1.5 rounded-lg border border-border bg-card px-3 py-2 text-xs font-medium hover:bg-muted"
@@ -270,6 +277,28 @@ export default function AgentDetailsPage() {
             <div className="flex justify-between">
               <dt className="text-muted-foreground">Pitch</dt>
               <dd className="font-medium">{agent.voice.pitch.toFixed(2)}</dd>
+            </div>
+          </dl>
+        </section>
+
+        <section className="rounded-xl border border-border bg-card p-5 space-y-2 md:col-span-2">
+          <h2 className="text-sm font-semibold">Local AI Model</h2>
+          <dl className="grid gap-2 text-xs sm:grid-cols-4">
+            <div>
+              <dt className="text-muted-foreground">Provider</dt>
+              <dd className="font-medium">{agent.model?.provider ?? "ollama"}</dd>
+            </div>
+            <div>
+              <dt className="text-muted-foreground">Model ID</dt>
+              <dd className="font-mono">{agent.model?.model_id || "Default"}</dd>
+            </div>
+            <div>
+              <dt className="text-muted-foreground">Temperature</dt>
+              <dd className="font-medium">{(agent.model?.temperature ?? 0.7).toFixed(2)}</dd>
+            </div>
+            <div>
+              <dt className="text-muted-foreground">Max Tokens</dt>
+              <dd className="font-medium">{agent.model?.max_tokens ?? 512}</dd>
             </div>
           </dl>
         </section>

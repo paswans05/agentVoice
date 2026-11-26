@@ -11,14 +11,22 @@ from fastapi.responses import JSONResponse
 from app.api.v1.router import api_v1_router
 from app.core.config import get_settings
 from app.core.logging import setup_logging
+from app.providers.llm import (
+    LLMModelNotFoundError,
+    LLMProviderError,
+    LLMTimeoutError,
+    LLMUnavailableError,
+)
 from app.providers.storage import JSONStorageProvider, StoragePathError
 from app.repositories.agent_repository import AgentRepositoryError
+from app.repositories.conversation_repository import ConversationRepositoryError
 from app.schemas.response import fail
 from app.services.agent_service import (
     AgentConflictError,
     AgentLifecycleError,
     AgentNotFoundError,
 )
+from app.services.conversation_service import ConversationNotFoundError
 
 logger = logging.getLogger(__name__)
 
@@ -89,6 +97,47 @@ def create_app() -> FastAPI:
             version=settings.app_version,
         )
         return JSONResponse(status_code=500, content=body.model_dump())
+
+    @app.exception_handler(ConversationNotFoundError)
+    async def conversation_not_found_handler(
+        request: Request, exc: ConversationNotFoundError
+    ) -> JSONResponse:
+        body = fail(code="NOT_FOUND", message=str(exc), version=settings.app_version)
+        return JSONResponse(status_code=404, content=body.model_dump())
+
+    @app.exception_handler(ConversationRepositoryError)
+    async def conversation_repo_error_handler(
+        request: Request, exc: ConversationRepositoryError
+    ) -> JSONResponse:
+        logger.error("Conversation storage error on %s %s: %s", request.method, request.url.path, exc)
+        body = fail(
+            code="STORAGE_ERROR",
+            message="Failed to access conversation storage.",
+            version=settings.app_version,
+        )
+        return JSONResponse(status_code=500, content=body.model_dump())
+
+    @app.exception_handler(LLMUnavailableError)
+    async def llm_unavailable_handler(request: Request, exc: LLMUnavailableError) -> JSONResponse:
+        body = fail(code="LLM_UNAVAILABLE", message=str(exc), version=settings.app_version)
+        return JSONResponse(status_code=503, content=body.model_dump())
+
+    @app.exception_handler(LLMModelNotFoundError)
+    async def llm_model_not_found_handler(
+        request: Request, exc: LLMModelNotFoundError
+    ) -> JSONResponse:
+        body = fail(code="MODEL_NOT_INSTALLED", message=str(exc), version=settings.app_version)
+        return JSONResponse(status_code=422, content=body.model_dump())
+
+    @app.exception_handler(LLMTimeoutError)
+    async def llm_timeout_handler(request: Request, exc: LLMTimeoutError) -> JSONResponse:
+        body = fail(code="LLM_TIMEOUT", message=str(exc), version=settings.app_version)
+        return JSONResponse(status_code=504, content=body.model_dump())
+
+    @app.exception_handler(LLMProviderError)
+    async def llm_provider_handler(request: Request, exc: LLMProviderError) -> JSONResponse:
+        body = fail(code="LLM_PROVIDER_ERROR", message=str(exc), version=settings.app_version)
+        return JSONResponse(status_code=502, content=body.model_dump())
 
     @app.exception_handler(Exception)
     async def unhandled_exception_handler(request: Request, exc: Exception) -> JSONResponse:

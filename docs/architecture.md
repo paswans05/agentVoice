@@ -45,7 +45,16 @@ It is structured as a modular monorepo with strict separation between:
 
 See [docs/agents.md](agents.md) for full schema and API details.
 
-## 4. Upcoming Phases
+## 4. Phase 3 — Local AI Integration (Implemented)
+
+- **LLM Provider Abstraction (`apps/api/app/providers/llm/`)**: `LLMProvider` interface, `LLMProviderFactory`, and `OllamaProvider` (async HTTP + streaming via `httpx`).
+- **Model Manager (`apps/api/app/services/model_manager.py`)**: Model discovery, background pull tasks with progress/cancellation, default model persistence (`agentvoice-data/models/registry.json`), and hardware guidance.
+- **Prompt Builder & Conversation Engine (`apps/api/app/services/prompt_builder.py`, `conversation_service.py`)**: Agent-to-model resolution, bounded context window, safety guardrails, SSE streaming, and JSON persistence (`agentvoice-data/conversations/`).
+- **Frontend**: `/models` (Model Manager), Agent Form **AI Model** step, and `/agents/[id]/playground` (Text-based AI Chat Playground).
+
+See [docs/local-llm.md](local-llm.md) for Ollama setup and API details.
+
+## 5. Upcoming Phases
 
 - **Phase 3 — Local AI Integration**: Ollama adapter implementing `LLMProvider`, model health/listing, streaming conversation API.
 - **Phase 4 — Speech Integration**: Local STT (`faster-whisper`), TTS (`Piper`), VAD (`Silero VAD`), WebSocket audio streaming.

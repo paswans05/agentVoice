@@ -36,7 +36,7 @@ export const SIDEBAR_NAV_ITEMS: NavItemConfig[] = [
     label: "Model Manager",
     href: "/models",
     phase: 3,
-    status: "planned",
+    status: "active",
     description: "Manage local LLM, STT, and TTS models",
   },
   {

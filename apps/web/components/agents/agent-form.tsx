@@ -10,7 +10,9 @@ import type {
   SupportedLocale,
 } from "@agentvoice/shared-types";
 import { Check, ChevronLeft, ChevronRight, Sparkles } from "lucide-react";
+import Link from "next/link";
 import { useEffect, useMemo, useState } from "react";
+import { useModelsOverview } from "@/hooks/use-models";
 import { AGENT_TYPE_LABELS } from "./agent-badges";
 
 const STEPS = [
@@ -19,6 +21,7 @@ const STEPS = [
   { id: "instructions", label: "Instructions" },
   { id: "language", label: "Language" },
   { id: "voice", label: "Voice" },
+  { id: "model", label: "AI Model" },
   { id: "review", label: "Review" },
 ] as const;
 
@@ -101,6 +104,18 @@ export function AgentForm({
   const [voiceId, setVoiceId] = useState(initialAgent?.voice.voice_id ?? "default");
   const [speed, setSpeed] = useState(initialAgent?.voice.speed ?? 1.0);
   const [pitch, setPitch] = useState(initialAgent?.voice.pitch ?? 1.0);
+
+  const [modelProvider, setModelProvider] = useState(initialAgent?.model?.provider ?? "ollama");
+  const [modelId, setModelId] = useState(initialAgent?.model?.model_id ?? "");
+  const [temperature, setTemperature] = useState(initialAgent?.model?.temperature ?? 0.7);
+  const [maxTokens, setMaxTokens] = useState(initialAgent?.model?.max_tokens ?? 512);
+  const [contextWindow, setContextWindow] = useState(
+    initialAgent?.model?.context_window_messages ?? 20,
+  );
+
+  const modelsQuery = useModelsOverview();
+  const installedModels = modelsQuery.data?.installed ?? [];
+  const defaultModelId = modelsQuery.data?.default_model_id ?? null;
 
   const [validationError, setValidationError] = useState<string | null>(null);
   const [dirty, setDirty] = useState(false);
@@ -205,6 +220,13 @@ export function AgentForm({
       speed,
       pitch,
     },
+    model: {
+      provider: modelProvider.trim() || "ollama",
+      model_id: modelId.trim(),
+      temperature,
+      max_tokens: maxTokens,
+      context_window_messages: contextWindow,
+    },
   });
 
   const validateForSubmit = (activateAfterSave: boolean): string | null => {
@@ -239,7 +261,7 @@ export function AgentForm({
   return (
     <div className="space-y-6">
       {/* Stepper */}
-      <nav aria-label="Agent configuration steps" className="grid grid-cols-3 gap-2 sm:grid-cols-6">
+      <nav aria-label="Agent configuration steps" className="grid grid-cols-3 gap-2 sm:grid-cols-7">
         {STEPS.map((step, idx) => {
           const isCurrent = idx === stepIndex;
           const isCompleted = idx < stepIndex;
@@ -675,6 +697,152 @@ export function AgentForm({
                     setPitch(Number(e.target.value));
                   }}
                   className="mt-2 w-full"
+                />
+              </div>
+            </div>
+          </div>
+        )}
+
+        {currentStep.id === "model" && (
+          <div className="space-y-4">
+            <div className="flex items-center justify-between gap-2">
+              <p className="text-xs text-muted-foreground">
+                Select a local LLM installed in Ollama, or leave blank to use your Model Manager
+                default ({defaultModelId ?? "none set"}).
+              </p>
+              <button
+                type="button"
+                onClick={() => void modelsQuery.refetch()}
+                className="shrink-0 rounded-lg border border-border px-2.5 py-1 text-xs font-medium hover:bg-muted"
+              >
+                Refresh Models
+              </button>
+            </div>
+
+            <div className="grid gap-4 sm:grid-cols-2">
+              <div>
+                <label htmlFor="model-provider" className="block text-sm font-medium">
+                  LLM Provider
+                </label>
+                <select
+                  id="model-provider"
+                  value={modelProvider}
+                  onChange={(e) => {
+                    markDirty();
+                    setModelProvider(e.target.value);
+                  }}
+                  className="mt-1.5 w-full rounded-lg border border-border bg-background px-3 py-2 text-sm focus:border-primary focus:outline-none"
+                >
+                  <option value="ollama">Ollama (Local)</option>
+                </select>
+              </div>
+
+              <div>
+                <label htmlFor="model-select" className="block text-sm font-medium">
+                  Installed Model
+                </label>
+                <select
+                  id="model-select"
+                  value={installedModels.some((m) => m.id === modelId) ? modelId : ""}
+                  onChange={(e) => {
+                    markDirty();
+                    setModelId(e.target.value);
+                  }}
+                  className="mt-1.5 w-full rounded-lg border border-border bg-background px-3 py-2 text-sm focus:border-primary focus:outline-none"
+                >
+                  <option value="">Use default / custom ID</option>
+                  {installedModels.map((m) => (
+                    <option key={m.id} value={m.id}>
+                      {m.id}
+                    </option>
+                  ))}
+                </select>
+              </div>
+            </div>
+
+            <div>
+              <label htmlFor="model-id-input" className="block text-sm font-medium">
+                Model Identifier (Optional Manual Override)
+              </label>
+              <input
+                id="model-id-input"
+                type="text"
+                value={modelId}
+                onChange={(e) => {
+                  markDirty();
+                  setModelId(e.target.value);
+                }}
+                placeholder="e.g., qwen2.5:3b"
+                maxLength={160}
+                className="mt-1.5 w-full rounded-lg border border-border bg-background px-3 py-2 text-sm font-mono focus:border-primary focus:outline-none"
+              />
+              {modelId.trim() &&
+                modelsQuery.data?.runtime.available &&
+                !installedModels.some(
+                  (m) => m.id === modelId.trim() || m.id === `${modelId.trim()}:latest`,
+                ) && (
+                  <p className="mt-1.5 text-xs text-amber-600 dark:text-amber-400">
+                    Model &ldquo;{modelId.trim()}&rdquo; is not currently installed in Ollama.{" "}
+                    <Link href="/models" className="underline font-medium">
+                      Open Model Manager
+                    </Link>
+                  </p>
+                )}
+            </div>
+
+            <div className="grid gap-4 sm:grid-cols-3">
+              <div>
+                <label htmlFor="model-temp" className="block text-sm font-medium">
+                  Temperature ({temperature.toFixed(2)})
+                </label>
+                <input
+                  id="model-temp"
+                  type="range"
+                  min={0.0}
+                  max={2.0}
+                  step={0.05}
+                  value={temperature}
+                  onChange={(e) => {
+                    markDirty();
+                    setTemperature(Number(e.target.value));
+                  }}
+                  className="mt-2 w-full"
+                />
+              </div>
+
+              <div>
+                <label htmlFor="model-max-tokens" className="block text-sm font-medium">
+                  Max Tokens
+                </label>
+                <input
+                  id="model-max-tokens"
+                  type="number"
+                  min={32}
+                  max={8192}
+                  value={maxTokens}
+                  onChange={(e) => {
+                    markDirty();
+                    setMaxTokens(Number(e.target.value) || 512);
+                  }}
+                  className="mt-1.5 w-full rounded-lg border border-border bg-background px-3 py-2 text-sm focus:border-primary focus:outline-none"
+                />
+              </div>
+
+              <div>
+                <label htmlFor="model-context" className="block text-sm font-medium">
+                  Context Window (turns)
+                </label>
+                <input
+                  id="model-context"
+                  type="number"
+                  min={2}
+                  max={100}
+                  value={contextWindow}
+                  onChange={(e) => {
+                    markDirty();
+                    setContextWindow(Number(e.target.value) || 20);
+                  }}
+                  className="mt-1.5 w-full rounded-lg border border-border bg-background px-3 py-2 text-sm focus:border-primary focus:outline-none"
                 />
               </div>
             </div>

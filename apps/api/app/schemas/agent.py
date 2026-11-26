@@ -129,6 +129,18 @@ class VoiceConfig(BaseModel):
     pitch: float = Field(default=1.0, ge=0.5, le=2.0)
 
 
+class ModelConfig(BaseModel):
+    """Local LLM model preferences for an agent."""
+
+    model_config = ConfigDict(extra="forbid")
+
+    provider: str = Field(default="ollama", min_length=1, max_length=60)
+    model_id: str = Field(default="", max_length=160)
+    temperature: float = Field(default=0.7, ge=0.0, le=2.0)
+    max_tokens: int = Field(default=512, ge=32, le=8192)
+    context_window_messages: int = Field(default=20, ge=2, le=100)
+
+
 class Agent(BaseModel):
     """Complete persisted AI voice agent configuration."""
 
@@ -145,6 +157,7 @@ class Agent(BaseModel):
     instructions: InstructionConfig = Field(default_factory=InstructionConfig)
     language: LanguageConfig = Field(default_factory=LanguageConfig)
     voice: VoiceConfig = Field(default_factory=VoiceConfig)
+    model: ModelConfig = Field(default_factory=ModelConfig)
 
     created_at: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
     updated_at: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
@@ -166,6 +179,7 @@ class AgentCreate(BaseModel):
     instructions: InstructionConfig = Field(default_factory=InstructionConfig)
     language: LanguageConfig = Field(default_factory=LanguageConfig)
     voice: VoiceConfig = Field(default_factory=VoiceConfig)
+    model: ModelConfig = Field(default_factory=ModelConfig)
 
     @field_validator("name")
     @classmethod
@@ -190,6 +204,7 @@ class AgentUpdate(BaseModel):
     instructions: InstructionConfig
     language: LanguageConfig
     voice: VoiceConfig
+    model: ModelConfig = Field(default_factory=ModelConfig)
 
     @field_validator("name")
     @classmethod
@@ -212,3 +227,4 @@ class AgentTemplate(BaseModel):
     instructions: InstructionConfig
     language: LanguageConfig
     voice: VoiceConfig
+    model: ModelConfig = Field(default_factory=ModelConfig)

@@ -51,6 +51,7 @@ export default function EditAgentPage() {
         instructions: payload.instructions,
         language: payload.language,
         voice: payload.voice,
+        model: payload.model,
       });
       router.push(`/agents/${agentId}`);
     } catch (err) {

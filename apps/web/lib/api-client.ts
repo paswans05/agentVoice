@@ -7,7 +7,12 @@ import type {
   AgentType,
   AgentUpdatePayload,
   ApiResponse,
+  Conversation,
   HealthData,
+  LLMRuntimeHealth,
+  ModelPullTask,
+  ModelsOverview,
+  StreamEvent,
   SystemStatusData,
 } from "@agentvoice/shared-types";
 
@@ -126,4 +131,127 @@ export function deactivateAgent(agentId: string): Promise<Agent> {
   return apiFetch<Agent>(`/api/v1/agents/${encodeURIComponent(agentId)}/deactivate`, {
     method: "POST",
   });
+}
+
+// --- Phase 3: LLM, Models & Conversations ---
+
+export function fetchLLMHealth(): Promise<LLMRuntimeHealth> {
+  return apiFetch<LLMRuntimeHealth>("/api/v1/llm/health");
+}
+
+export function fetchModelsOverview(): Promise<ModelsOverview> {
+  return apiFetch<ModelsOverview>("/api/v1/models");
+}
+
+export function refreshModels(): Promise<ModelsOverview> {
+  return apiFetch<ModelsOverview>("/api/v1/models/refresh", { method: "POST" });
+}
+
+export function setDefaultModel(modelId: string): Promise<{ default_model_id: string }> {
+  return apiFetch<{ default_model_id: string }>("/api/v1/models/default", {
+    method: "POST",
+    body: JSON.stringify({ model_id: modelId }),
+  });
+}
+
+export function pullModel(modelId: string): Promise<ModelPullTask> {
+  return apiFetch<ModelPullTask>("/api/v1/models/pull", {
+    method: "POST",
+    body: JSON.stringify({ model_id: modelId }),
+  });
+}
+
+export function fetchPullStatus(taskId: string): Promise<ModelPullTask> {
+  return apiFetch<ModelPullTask>(`/api/v1/models/pull/${encodeURIComponent(taskId)}`);
+}
+
+export function cancelModelPull(taskId: string): Promise<ModelPullTask> {
+  return apiFetch<ModelPullTask>(`/api/v1/models/pull/${encodeURIComponent(taskId)}/cancel`, {
+    method: "POST",
+  });
+}
+
+export function deleteModel(modelId: string): Promise<{ deleted: boolean; model_id: string }> {
+  return apiFetch<{ deleted: boolean; model_id: string }>(
+    `/api/v1/models/${encodeURIComponent(modelId)}`,
+    { method: "DELETE" },
+  );
+}
+
+export function fetchAgentConversations(agentId: string): Promise<Conversation[]> {
+  return apiFetch<Conversation[]>(`/api/v1/agents/${encodeURIComponent(agentId)}/conversations`);
+}
+
+export function createConversation(
+  agentId: string,
+  title = "New Conversation",
+  modelId?: string,
+): Promise<Conversation> {
+  return apiFetch<Conversation>(`/api/v1/agents/${encodeURIComponent(agentId)}/conversations`, {
+    method: "POST",
+    body: JSON.stringify({ title, model_id: modelId ?? null }),
+  });
+}
+
+export function fetchConversation(conversationId: string): Promise<Conversation> {
+  return apiFetch<Conversation>(`/api/v1/conversations/${encodeURIComponent(conversationId)}`);
+}
+
+export function deleteConversation(
+  conversationId: string,
+): Promise<{ deleted: boolean; id: string }> {
+  return apiFetch<{ deleted: boolean; id: string }>(
+    `/api/v1/conversations/${encodeURIComponent(conversationId)}`,
+    { method: "DELETE" },
+  );
+}
+
+export async function streamConversationMessage(
+  conversationId: string,
+  content: string,
+  onEvent: (event: StreamEvent) => void,
+  signal?: AbortSignal,
+): Promise<void> {
+  const url = `${API_BASE_URL}/api/v1/conversations/${encodeURIComponent(conversationId)}/messages/stream`;
+  const response = await fetch(url, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ content, allow_draft_preview: true }),
+    signal,
+  });
+
+  if (!response.ok || !response.body) {
+    let message = `Streaming request failed (${response.status})`;
+    try {
+      const errJson = (await response.json()) as ApiResponse<null>;
+      if (errJson.error?.message) message = errJson.error.message;
+    } catch {
+      // ignore non-json error body
+    }
+    throw new ApiClientError(message, "STREAM_FAILED", response.status);
+  }
+
+  const reader = response.body.getReader();
+  const decoder = new TextDecoder();
+  let buffer = "";
+
+  while (true) {
+    const { done, value } = await reader.read();
+    if (done) break;
+    buffer += decoder.decode(value, { stream: true });
+
+    const lines = buffer.split("\n");
+    buffer = lines.pop() ?? "";
+
+    for (const rawLine of lines) {
+      const line = rawLine.trim();
+      if (!line.startsWith("data: ")) continue;
+      try {
+        const parsed = JSON.parse(line.slice(6)) as StreamEvent;
+        onEvent(parsed);
+      } catch {
+        // ignore malformed SSE chunk
+      }
+    }
+  }
 }
