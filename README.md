@@ -1,3 +1,7 @@
+<p align="left">
+  <img src="apps/web/public/logo.png" alt="agentVoice logo" width="48" height="48" />
+</p>
+
 # agentVoice
 
 **Your AI. Your Voice. Your Infrastructure.**

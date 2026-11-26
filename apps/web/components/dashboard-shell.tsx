@@ -23,6 +23,7 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { useState, type ComponentType, type ReactNode } from "react";
 import { useBackendHealth } from "@/hooks/use-health";
+import { BrandLogo } from "./brand-logo";
 import { ThemeToggle } from "./theme-toggle";
 
 const NAV_ICONS: Record<string, ComponentType<{ className?: string }>> = {
@@ -95,18 +96,14 @@ export function DashboardShell({ children }: { children: ReactNode }) {
     <div className="flex min-h-screen bg-background text-foreground">
       {/* Desktop Sidebar */}
       <aside className="hidden w-64 shrink-0 flex-col border-r border-border bg-card lg:flex">
-        <div className="flex h-16 items-center gap-2.5 border-b border-border px-5">
-          <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-primary text-primary-foreground">
-            <Mic className="h-4 w-4" />
-          </div>
-          <div>
-            <div className="text-sm font-semibold tracking-tight">{APP_CONFIG.name}</div>
-            <div className="text-[11px] text-muted-foreground">Local-First Voice AI</div>
-          </div>
+        <div className="flex h-16 items-center border-b border-border px-5">
+          <Link href="/" className="hover:opacity-90 transition-opacity">
+            <BrandLogo showSubtitle />
+          </Link>
         </div>
         {renderNavLinks()}
         <div className="border-t border-border p-4 text-xs text-muted-foreground">
-          <div>v{APP_CONFIG.version} · Phase 1 Foundation</div>
+          <div>v{APP_CONFIG.version} · Local-First</div>
         </div>
       </aside>
 
@@ -120,12 +117,9 @@ export function DashboardShell({ children }: { children: ReactNode }) {
           />
           <aside className="relative z-10 flex w-64 flex-col border-r border-border bg-card">
             <div className="flex h-16 items-center justify-between border-b border-border px-5">
-              <div className="flex items-center gap-2.5">
-                <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-primary text-primary-foreground">
-                  <Mic className="h-4 w-4" />
-                </div>
-                <span className="text-sm font-semibold">{APP_CONFIG.name}</span>
-              </div>
+              <Link href="/" onClick={() => setMobileOpen(false)}>
+                <BrandLogo />
+              </Link>
               <button
                 type="button"
                 onClick={() => setMobileOpen(false)}
