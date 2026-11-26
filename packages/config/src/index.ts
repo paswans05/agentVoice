@@ -44,7 +44,7 @@ export const SIDEBAR_NAV_ITEMS: NavItemConfig[] = [
     label: "Voice Playground",
     href: "/playground",
     phase: 4,
-    status: "planned",
+    status: "active",
     description: "Real-time browser microphone voice testing",
   },
   {

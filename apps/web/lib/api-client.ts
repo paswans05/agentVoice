@@ -7,13 +7,18 @@ import type {
   AgentType,
   AgentUpdatePayload,
   ApiResponse,
+  AudioSettings,
   Conversation,
   HealthData,
   LLMRuntimeHealth,
   ModelPullTask,
   ModelsOverview,
+  SpeechRuntimeHealth,
   StreamEvent,
+  STTModelInfo,
   SystemStatusData,
+  TTSVoiceInfo,
+  VoiceSessionInfo,
 } from "@agentvoice/shared-types";
 
 export const API_BASE_URL =
@@ -254,4 +259,57 @@ export async function streamConversationMessage(
       }
     }
   }
+}
+
+// --- Phase 4: Speech & Real-Time Voice ---
+
+export function fetchSpeechHealth(): Promise<SpeechRuntimeHealth> {
+  return apiFetch<SpeechRuntimeHealth>("/api/v1/speech/health");
+}
+
+export function fetchSTTModels(): Promise<STTModelInfo[]> {
+  return apiFetch<STTModelInfo[]>("/api/v1/speech/stt/models");
+}
+
+export function fetchTTSVoices(): Promise<TTSVoiceInfo[]> {
+  return apiFetch<TTSVoiceInfo[]>("/api/v1/speech/tts/voices");
+}
+
+export function fetchAudioSettings(): Promise<AudioSettings> {
+  return apiFetch<AudioSettings>("/api/v1/speech/settings");
+}
+
+export function updateAudioSettings(payload: AudioSettings): Promise<AudioSettings> {
+  return apiFetch<AudioSettings>("/api/v1/speech/settings", {
+    method: "PUT",
+    body: JSON.stringify(payload),
+  });
+}
+
+export function createVoiceSession(
+  agentId: string,
+  conversationId?: string | null,
+): Promise<VoiceSessionInfo> {
+  return apiFetch<VoiceSessionInfo>("/api/v1/voice/sessions", {
+    method: "POST",
+    body: JSON.stringify({
+      agent_id: agentId,
+      conversation_id: conversationId ?? null,
+      allow_draft_preview: true,
+    }),
+  });
+}
+
+export function deleteVoiceSession(
+  sessionId: string,
+): Promise<{ deleted: boolean; session_id: string }> {
+  return apiFetch<{ deleted: boolean; session_id: string }>(
+    `/api/v1/voice/sessions/${encodeURIComponent(sessionId)}`,
+    { method: "DELETE" },
+  );
+}
+
+export function getVoiceWebSocketUrl(sessionId: string): string {
+  const wsBase = API_BASE_URL.replace(/^http:/i, "ws:").replace(/^https:/i, "wss:");
+  return `${wsBase}/api/v1/voice/sessions/${encodeURIComponent(sessionId)}/stream`;
 }

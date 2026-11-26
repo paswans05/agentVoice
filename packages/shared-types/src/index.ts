@@ -253,3 +253,100 @@ export type StreamEvent =
       message: ChatMessage;
     }
   | { event: "error"; message: string };
+
+export type VoiceSessionState =
+  | "IDLE"
+  | "CONNECTING"
+  | "LISTENING"
+  | "SPEECH_DETECTED"
+  | "TRANSCRIBING"
+  | "THINKING"
+  | "GENERATING_SPEECH"
+  | "SPEAKING"
+  | "INTERRUPTED"
+  | "ERROR"
+  | "COMPLETED";
+
+export interface SpeechProviderHealth {
+  provider: string;
+  available: boolean;
+  is_local: boolean;
+  details: string | null;
+  error: string | null;
+}
+
+export interface SpeechRuntimeHealth {
+  stt: SpeechProviderHealth;
+  tts: SpeechProviderHealth;
+  vad: SpeechProviderHealth;
+  checked_at: string;
+}
+
+export interface STTModelInfo {
+  id: string;
+  name: string;
+  provider: string;
+  languages: string[];
+  approximate_size: string;
+  min_ram_gb: number;
+  license: string;
+  installed: boolean;
+}
+
+export interface TTSVoiceInfo {
+  id: string;
+  name: string;
+  provider: string;
+  language: string;
+  sample_rate: number;
+  license: string;
+  installed: boolean;
+}
+
+export interface AudioSettings {
+  input_sample_rate: number;
+  output_format: "audio/wav" | "pcm_s16le";
+  stt_provider: string;
+  stt_model: string;
+  hinglish_script_mode: "auto" | "original" | "hindi" | "english";
+  tts_provider: string;
+  default_voice_id: string;
+  default_speed: number;
+  default_pitch: number;
+  vad_threshold: number;
+  min_speech_ms: number;
+  min_silence_ms: number;
+  max_utterance_ms: number;
+}
+
+export interface LatencyMetrics {
+  vad_ms: number;
+  stt_ms: number;
+  llm_ttft_ms: number;
+  llm_total_ms: number;
+  tts_ms: number;
+  total_ms: number;
+}
+
+export interface VoiceSessionInfo {
+  session_id: string;
+  agent_id: string;
+  conversation_id: string;
+  model_id: string;
+  state: VoiceSessionState;
+  stt_provider: string;
+  tts_provider: string;
+  voice_id: string;
+  created_at: string;
+  updated_at: string;
+  last_latency: LatencyMetrics | null;
+}
+
+export type VoiceWsEvent =
+  | { type: "session.state"; state: VoiceSessionState; session_id: string }
+  | { type: "transcript.partial"; text: string }
+  | { type: "transcript.final"; text: string; language?: string | null; duration_seconds?: number }
+  | { type: "response.text"; text: string }
+  | { type: "response.interrupted"; session_id: string }
+  | { type: "metrics"; data: LatencyMetrics }
+  | { type: "error"; message: string };

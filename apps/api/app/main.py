@@ -18,6 +18,13 @@ from app.providers.llm import (
     LLMUnavailableError,
 )
 from app.providers.storage import JSONStorageProvider, StoragePathError
+from app.providers.stt import STTAudioError, STTProviderError, STTUnavailableError
+from app.providers.tts import (
+    TTSProviderError,
+    TTSUnavailableError,
+    TTSValidationError,
+    TTSVoiceNotFoundError,
+)
 from app.repositories.agent_repository import AgentRepositoryError
 from app.repositories.conversation_repository import ConversationRepositoryError
 from app.schemas.response import fail
@@ -27,6 +34,7 @@ from app.services.agent_service import (
     AgentNotFoundError,
 )
 from app.services.conversation_service import ConversationNotFoundError
+from app.services.voice_session_manager import VoiceSessionNotFoundError
 
 logger = logging.getLogger(__name__)
 
@@ -138,6 +146,48 @@ def create_app() -> FastAPI:
     async def llm_provider_handler(request: Request, exc: LLMProviderError) -> JSONResponse:
         body = fail(code="LLM_PROVIDER_ERROR", message=str(exc), version=settings.app_version)
         return JSONResponse(status_code=502, content=body.model_dump())
+
+    @app.exception_handler(STTUnavailableError)
+    async def stt_unavailable_handler(request: Request, exc: STTUnavailableError) -> JSONResponse:
+        body = fail(code="STT_UNAVAILABLE", message=str(exc), version=settings.app_version)
+        return JSONResponse(status_code=503, content=body.model_dump())
+
+    @app.exception_handler(STTAudioError)
+    async def stt_audio_handler(request: Request, exc: STTAudioError) -> JSONResponse:
+        body = fail(code="INVALID_AUDIO", message=str(exc), version=settings.app_version)
+        return JSONResponse(status_code=422, content=body.model_dump())
+
+    @app.exception_handler(STTProviderError)
+    async def stt_provider_handler(request: Request, exc: STTProviderError) -> JSONResponse:
+        body = fail(code="STT_ERROR", message=str(exc), version=settings.app_version)
+        return JSONResponse(status_code=502, content=body.model_dump())
+
+    @app.exception_handler(TTSUnavailableError)
+    async def tts_unavailable_handler(request: Request, exc: TTSUnavailableError) -> JSONResponse:
+        body = fail(code="TTS_UNAVAILABLE", message=str(exc), version=settings.app_version)
+        return JSONResponse(status_code=503, content=body.model_dump())
+
+    @app.exception_handler(TTSVoiceNotFoundError)
+    async def tts_voice_handler(request: Request, exc: TTSVoiceNotFoundError) -> JSONResponse:
+        body = fail(code="VOICE_NOT_INSTALLED", message=str(exc), version=settings.app_version)
+        return JSONResponse(status_code=422, content=body.model_dump())
+
+    @app.exception_handler(TTSValidationError)
+    async def tts_validation_handler(request: Request, exc: TTSValidationError) -> JSONResponse:
+        body = fail(code="VALIDATION_ERROR", message=str(exc), version=settings.app_version)
+        return JSONResponse(status_code=422, content=body.model_dump())
+
+    @app.exception_handler(TTSProviderError)
+    async def tts_provider_handler(request: Request, exc: TTSProviderError) -> JSONResponse:
+        body = fail(code="TTS_ERROR", message=str(exc), version=settings.app_version)
+        return JSONResponse(status_code=502, content=body.model_dump())
+
+    @app.exception_handler(VoiceSessionNotFoundError)
+    async def voice_session_handler(
+        request: Request, exc: VoiceSessionNotFoundError
+    ) -> JSONResponse:
+        body = fail(code="NOT_FOUND", message=str(exc), version=settings.app_version)
+        return JSONResponse(status_code=404, content=body.model_dump())
 
     @app.exception_handler(Exception)
     async def unhandled_exception_handler(request: Request, exc: Exception) -> JSONResponse:

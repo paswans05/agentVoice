@@ -54,7 +54,16 @@ See [docs/agents.md](agents.md) for full schema and API details.
 
 See [docs/local-llm.md](local-llm.md) for Ollama setup and API details.
 
-## 5. Upcoming Phases
+## 5. Phase 4 — Speech Integration & Real-Time Voice (Implemented)
+
+- **Speech Providers**: `STTProvider` (`FasterWhisperSTTProvider`), `TTSProvider` (`PiperTTSProvider`), and `VADProvider` (`EnergyVADProvider`) with factory abstractions.
+- **Voice Session Manager (`apps/api/app/services/voice_session_manager.py`)**: 11-state voice machine, pre-roll ring buffer, Phase 3 `ConversationService` integration, barge-in cancellation, and stage latency metrics.
+- **WebSocket & REST APIs (`apps/api/app/api/v1/speech.py`, `voice.py`)**: Bidirectional binary/JSON WebSocket streaming at `/api/v1/voice/sessions/{id}/stream` and Speech REST endpoints.
+- **Frontend**: Browser microphone capture & WAV playback (`use-voice-session.ts`), upgraded Voice & Text Playground (`/playground`, `/agents/[id]/playground`), and Audio & Speech Settings in `/settings`.
+
+See [docs/voice-engine.md](voice-engine.md) for setup and protocol details.
+
+## 6. Upcoming Phases
 
 - **Phase 3 — Local AI Integration**: Ollama adapter implementing `LLMProvider`, model health/listing, streaming conversation API.
 - **Phase 4 — Speech Integration**: Local STT (`faster-whisper`), TTS (`Piper`), VAD (`Silero VAD`), WebSocket audio streaming.
