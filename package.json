@@ -1,0 +1,17 @@
+{
+  "name": "agentvoice",
+  "version": "0.1.0",
+  "private": true,
+  "description": "agentVoice — Open-source, self-hosted, local-first AI voice agent platform",
+  "workspaces": [
+    "apps/web",
+    "packages/*"
+  ],
+  "scripts": {
+    "dev:web": "npm --workspace=@agentvoice/web run dev",
+    "build:web": "npm --workspace=@agentvoice/web run build",
+    "lint:web": "npm --workspace=@agentvoice/web run lint",
+    "typecheck:web": "npm --workspace=@agentvoice/web run typecheck",
+    "test:web": "npm --workspace=@agentvoice/web run test"
+  }
+}
