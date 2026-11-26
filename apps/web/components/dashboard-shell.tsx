@@ -5,6 +5,7 @@ import { STATUS_TONE_CLASSES } from "@agentvoice/ui";
 import {
   Activity,
   BarChart3,
+  BookOpen,
   Bot,
   Cpu,
   History,
@@ -29,6 +30,7 @@ const NAV_ICONS: Record<string, ComponentType<{ className?: string }>> = {
   agents: Bot,
   models: Cpu,
   playground: Mic,
+  "knowledge-base": BookOpen,
   leads: Users,
   campaigns: Megaphone,
   "live-calls": PhoneCall,

@@ -48,6 +48,14 @@ export const SIDEBAR_NAV_ITEMS: NavItemConfig[] = [
     description: "Real-time browser microphone voice testing",
   },
   {
+    id: "knowledge-base",
+    label: "Knowledge Base",
+    href: "/knowledge-base",
+    phase: 5,
+    status: "active",
+    description: "Upload documents and manage local RAG knowledge bases",
+  },
+  {
     id: "leads",
     label: "Leads",
     href: "/leads",

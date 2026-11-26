@@ -15,6 +15,7 @@ from app.providers.llm import (
 )
 from app.repositories.conversation_repository import ConversationRepository
 from app.schemas.agent import Agent, AgentStatus
+from app.schemas.knowledge import SourceCitation
 from app.schemas.llm import (
     ChatMessage,
     Conversation,
@@ -25,6 +26,7 @@ from app.schemas.llm import (
 from app.services.agent_service import AgentLifecycleError, AgentService
 from app.services.model_manager import ModelManager
 from app.services.prompt_builder import PromptBuilder
+from app.services.rag_service import RAGService
 
 logger = logging.getLogger(__name__)
 
@@ -42,11 +44,13 @@ class ConversationService:
         model_manager: ModelManager,
         llm_provider: LLMProvider,
         conversation_repo: ConversationRepository,
+        rag_service: RAGService | None = None,
     ) -> None:
         self._agents = agent_service
         self._models = model_manager
         self._llm = llm_provider
         self._repo = conversation_repo
+        self._rag = rag_service
 
     async def _resolve_agent_and_model(
         self,
@@ -138,7 +142,24 @@ class ConversationService:
         )
 
         user_msg = ChatMessage(role="user", content=payload.content.strip())
-        prompt_messages = PromptBuilder.build_messages(agent, conv.messages, user_msg.content)
+        kb_active = bool(agent.knowledge_base.enabled and agent.knowledge_base.knowledge_base_id)
+        retrieved_context: str | None = None
+        sources: list[SourceCitation] = []
+        grounded: bool | None = None
+
+        if kb_active and self._rag is not None:
+            retrieved_context, sources, is_grounded = await self._rag.retrieve_for_agent(
+                agent, user_msg.content
+            )
+            grounded = is_grounded
+
+        prompt_messages = PromptBuilder.build_messages(
+            agent,
+            conv.messages,
+            user_msg.content,
+            retrieved_context=retrieved_context,
+            kb_active=kb_active,
+        )
 
         # Persist user message before generation
         conv.messages.append(user_msg)
@@ -159,6 +180,8 @@ class ConversationService:
             content=reply_text.strip(),
             model_id=model_id,
             duration_ms=duration_ms,
+            sources=sources,
+            grounded=grounded,
         )
         conv.messages.append(assistant_msg)
         conv = await self._repo.save(conv)
@@ -184,7 +207,24 @@ class ConversationService:
         )
 
         user_msg = ChatMessage(role="user", content=payload.content.strip())
-        prompt_messages = PromptBuilder.build_messages(agent, conv.messages, user_msg.content)
+        kb_active = bool(agent.knowledge_base.enabled and agent.knowledge_base.knowledge_base_id)
+        retrieved_context: str | None = None
+        sources: list[SourceCitation] = []
+        grounded: bool | None = None
+
+        if kb_active and self._rag is not None:
+            retrieved_context, sources, is_grounded = await self._rag.retrieve_for_agent(
+                agent, user_msg.content
+            )
+            grounded = is_grounded
+
+        prompt_messages = PromptBuilder.build_messages(
+            agent,
+            conv.messages,
+            user_msg.content,
+            retrieved_context=retrieved_context,
+            kb_active=kb_active,
+        )
 
         # Persist user message immediately
         conv.messages.append(user_msg)
@@ -225,6 +265,8 @@ class ConversationService:
                 content=full_text,
                 model_id=model_id,
                 duration_ms=duration_ms,
+                sources=sources,
+                grounded=grounded,
             )
             conv.messages.append(assistant_msg)
             await self._repo.save(conv)

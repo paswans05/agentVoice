@@ -11,6 +11,11 @@ from fastapi.responses import JSONResponse
 from app.api.v1.router import api_v1_router
 from app.core.config import get_settings
 from app.core.logging import setup_logging
+from app.providers.embeddings import (
+    EmbeddingDimensionError,
+    EmbeddingProviderError,
+    EmbeddingUnavailableError,
+)
 from app.providers.llm import (
     LLMModelNotFoundError,
     LLMProviderError,
@@ -34,6 +39,8 @@ from app.services.agent_service import (
     AgentNotFoundError,
 )
 from app.services.conversation_service import ConversationNotFoundError
+from app.services.document_parser import DocumentParseError
+from app.services.knowledge_service import DocumentNotFoundError, KnowledgeBaseNotFoundError
 from app.services.voice_session_manager import VoiceSessionNotFoundError
 
 logger = logging.getLogger(__name__)
@@ -188,6 +195,46 @@ def create_app() -> FastAPI:
     ) -> JSONResponse:
         body = fail(code="NOT_FOUND", message=str(exc), version=settings.app_version)
         return JSONResponse(status_code=404, content=body.model_dump())
+
+    @app.exception_handler(KnowledgeBaseNotFoundError)
+    async def kb_not_found_handler(
+        request: Request, exc: KnowledgeBaseNotFoundError
+    ) -> JSONResponse:
+        body = fail(code="NOT_FOUND", message=str(exc), version=settings.app_version)
+        return JSONResponse(status_code=404, content=body.model_dump())
+
+    @app.exception_handler(DocumentNotFoundError)
+    async def doc_not_found_handler(
+        request: Request, exc: DocumentNotFoundError
+    ) -> JSONResponse:
+        body = fail(code="NOT_FOUND", message=str(exc), version=settings.app_version)
+        return JSONResponse(status_code=404, content=body.model_dump())
+
+    @app.exception_handler(DocumentParseError)
+    async def doc_parse_handler(request: Request, exc: DocumentParseError) -> JSONResponse:
+        body = fail(code="INVALID_DOCUMENT", message=str(exc), version=settings.app_version)
+        return JSONResponse(status_code=422, content=body.model_dump())
+
+    @app.exception_handler(EmbeddingUnavailableError)
+    async def embedding_unavail_handler(
+        request: Request, exc: EmbeddingUnavailableError
+    ) -> JSONResponse:
+        body = fail(code="EMBEDDING_UNAVAILABLE", message=str(exc), version=settings.app_version)
+        return JSONResponse(status_code=503, content=body.model_dump())
+
+    @app.exception_handler(EmbeddingDimensionError)
+    async def embedding_dim_handler(
+        request: Request, exc: EmbeddingDimensionError
+    ) -> JSONResponse:
+        body = fail(code="EMBEDDING_MISMATCH", message=str(exc), version=settings.app_version)
+        return JSONResponse(status_code=422, content=body.model_dump())
+
+    @app.exception_handler(EmbeddingProviderError)
+    async def embedding_err_handler(
+        request: Request, exc: EmbeddingProviderError
+    ) -> JSONResponse:
+        body = fail(code="EMBEDDING_ERROR", message=str(exc), version=settings.app_version)
+        return JSONResponse(status_code=502, content=body.model_dump())
 
     @app.exception_handler(Exception)
     async def unhandled_exception_handler(request: Request, exc: Exception) -> JSONResponse:

@@ -8,6 +8,7 @@ from fastapi.responses import StreamingResponse
 
 from app.api.v1.agents import get_agent_service
 from app.api.v1.health import get_storage
+from app.api.v1.knowledge import get_rag_service
 from app.api.v1.llm import get_llm_provider
 from app.api.v1.models import get_model_manager
 from app.core.config import Settings, get_settings
@@ -24,6 +25,7 @@ from app.schemas.response import ApiResponse, ok
 from app.services.agent_service import AgentService
 from app.services.conversation_service import ConversationService
 from app.services.model_manager import ModelManager
+from app.services.rag_service import RAGService
 
 router = APIRouter(tags=["conversations"])
 
@@ -33,6 +35,7 @@ def get_conversation_service(
     model_manager: ModelManager = Depends(get_model_manager),
     llm_provider: LLMProvider = Depends(get_llm_provider),
     storage: StorageProvider = Depends(get_storage),
+    rag_service: RAGService = Depends(get_rag_service),
 ) -> ConversationService:
     """Dependency providing ConversationService."""
     return ConversationService(
@@ -40,6 +43,7 @@ def get_conversation_service(
         model_manager=model_manager,
         llm_provider=llm_provider,
         conversation_repo=ConversationRepository(storage),
+        rag_service=rag_service,
     )
 
 

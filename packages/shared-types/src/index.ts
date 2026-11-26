@@ -116,6 +116,16 @@ export interface ModelConfig {
   context_window_messages: number;
 }
 
+export interface KnowledgeBaseAgentConfig {
+  enabled: boolean;
+  knowledge_base_id: string | null;
+  top_k: number;
+  similarity_threshold: number;
+  max_context_tokens: number;
+  require_sources_for_company_facts: boolean;
+  fallback_when_not_found: boolean;
+}
+
 export interface Agent {
   id: string;
   name: string;
@@ -128,6 +138,7 @@ export interface Agent {
   language: LanguageConfig;
   voice: VoiceConfig;
   model?: ModelConfig;
+  knowledge_base?: KnowledgeBaseAgentConfig;
   created_at: string;
   updated_at: string;
   version: number;
@@ -144,6 +155,7 @@ export interface AgentCreatePayload {
   language: LanguageConfig;
   voice: VoiceConfig;
   model?: ModelConfig;
+  knowledge_base?: KnowledgeBaseAgentConfig;
 }
 
 export interface AgentUpdatePayload {
@@ -156,6 +168,7 @@ export interface AgentUpdatePayload {
   language: LanguageConfig;
   voice: VoiceConfig;
   model?: ModelConfig;
+  knowledge_base?: KnowledgeBaseAgentConfig;
 }
 
 export interface AgentTemplate {
@@ -224,12 +237,22 @@ export interface ModelsOverview {
   recommendations: ModelRecommendation[];
 }
 
+export interface SourceCitation {
+  document_id: string;
+  filename: string;
+  page_number?: number | null;
+  chunk_id: string;
+  score?: number | null;
+}
+
 export interface ChatMessage {
   role: "system" | "user" | "assistant";
   content: string;
   timestamp: string;
   model_id?: string | null;
   duration_ms?: number | null;
+  sources?: SourceCitation[];
+  grounded?: boolean | null;
 }
 
 export interface Conversation {
@@ -350,3 +373,75 @@ export type VoiceWsEvent =
   | { type: "response.interrupted"; session_id: string }
   | { type: "metrics"; data: LatencyMetrics }
   | { type: "error"; message: string };
+
+export type KnowledgeBaseStatus =
+  | "EMPTY"
+  | "PENDING"
+  | "PROCESSING"
+  | "INDEXING"
+  | "READY"
+  | "FAILED"
+  | "DISABLED";
+
+export type DocumentStatus = "PENDING" | "PROCESSING" | "INDEXING" | "READY" | "FAILED";
+
+export interface KnowledgeBase {
+  id: string;
+  name: string;
+  description: string;
+  agent_ids: string[];
+  enabled: boolean;
+  status: KnowledgeBaseStatus;
+  document_count: number;
+  chunk_count: number;
+  embedding_model: string;
+  last_indexed_at: string | null;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface KnowledgeDocument {
+  id: string;
+  knowledge_base_id: string;
+  filename: string;
+  file_type: string;
+  size_bytes: number;
+  status: DocumentStatus;
+  chunk_count: number;
+  error_message: string | null;
+  extraction_ms: number;
+  chunking_ms: number;
+  embedding_ms: number;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface RetrievalHit {
+  chunk_id: string;
+  document_id: string;
+  knowledge_base_id: string;
+  filename: string;
+  page_number: number | null;
+  section_title: string | null;
+  content: string;
+  score: number;
+}
+
+export interface RetrievalTestResult {
+  query: string;
+  hits: RetrievalHit[];
+  grounded: boolean;
+  retrieval_ms: number;
+  answer?: string | null;
+}
+
+export interface RAGSettings {
+  embedding_provider: string;
+  embedding_model: string;
+  chunk_size_tokens: number;
+  chunk_overlap_tokens: number;
+  default_top_k: number;
+  similarity_threshold: number;
+  max_context_tokens: number;
+  max_file_size_mb: number;
+}

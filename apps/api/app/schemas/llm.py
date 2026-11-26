@@ -8,6 +8,8 @@ from typing import Literal
 
 from pydantic import BaseModel, ConfigDict, Field
 
+from app.schemas.knowledge import SourceCitation
+
 
 class ModelStatus(str, Enum):
     """Lifecycle status of a local LLM model."""
@@ -116,6 +118,8 @@ class ChatMessage(BaseModel):
     timestamp: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
     model_id: str | None = None
     duration_ms: int | None = None
+    sources: list[SourceCitation] = Field(default_factory=list)
+    grounded: bool | None = None
 
 
 class Conversation(BaseModel):

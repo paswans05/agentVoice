@@ -382,6 +382,16 @@ export default function AgentPlaygroundPage() {
                   }`}
                 >
                   <p className="whitespace-pre-wrap">{msg.content}</p>
+                  {msg.role === "assistant" && msg.sources && msg.sources.length > 0 && (
+                    <div className="mt-2 border-t border-border/60 pt-1.5 text-[11px] text-muted-foreground">
+                      <span className="font-medium text-emerald-600 dark:text-emerald-400">
+                        Grounded Sources:
+                      </span>{" "}
+                      {msg.sources
+                        .map((s) => `${s.filename}${s.page_number ? ` p.${s.page_number}` : ""}`)
+                        .join(", ")}
+                    </div>
+                  )}
                 </div>
                 {msg.role === "user" && (
                   <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-muted text-foreground">

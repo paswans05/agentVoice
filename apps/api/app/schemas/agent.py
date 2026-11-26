@@ -141,6 +141,20 @@ class ModelConfig(BaseModel):
     context_window_messages: int = Field(default=20, ge=2, le=100)
 
 
+class KnowledgeBaseAgentConfig(BaseModel):
+    """Per-agent knowledge base and RAG retrieval settings."""
+
+    model_config = ConfigDict(extra="forbid")
+
+    enabled: bool = True
+    knowledge_base_id: str | None = Field(default=None, max_length=64)
+    top_k: int = Field(default=5, ge=1, le=20)
+    similarity_threshold: float = Field(default=0.25, ge=0.0, le=1.0)
+    max_context_tokens: int = Field(default=2000, ge=200, le=8000)
+    require_sources_for_company_facts: bool = True
+    fallback_when_not_found: bool = True
+
+
 class Agent(BaseModel):
     """Complete persisted AI voice agent configuration."""
 
@@ -158,6 +172,7 @@ class Agent(BaseModel):
     language: LanguageConfig = Field(default_factory=LanguageConfig)
     voice: VoiceConfig = Field(default_factory=VoiceConfig)
     model: ModelConfig = Field(default_factory=ModelConfig)
+    knowledge_base: KnowledgeBaseAgentConfig = Field(default_factory=KnowledgeBaseAgentConfig)
 
     created_at: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
     updated_at: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
@@ -180,6 +195,7 @@ class AgentCreate(BaseModel):
     language: LanguageConfig = Field(default_factory=LanguageConfig)
     voice: VoiceConfig = Field(default_factory=VoiceConfig)
     model: ModelConfig = Field(default_factory=ModelConfig)
+    knowledge_base: KnowledgeBaseAgentConfig = Field(default_factory=KnowledgeBaseAgentConfig)
 
     @field_validator("name")
     @classmethod
@@ -205,6 +221,7 @@ class AgentUpdate(BaseModel):
     language: LanguageConfig
     voice: VoiceConfig
     model: ModelConfig = Field(default_factory=ModelConfig)
+    knowledge_base: KnowledgeBaseAgentConfig = Field(default_factory=KnowledgeBaseAgentConfig)
 
     @field_validator("name")
     @classmethod
@@ -228,3 +245,4 @@ class AgentTemplate(BaseModel):
     language: LanguageConfig
     voice: VoiceConfig
     model: ModelConfig = Field(default_factory=ModelConfig)
+    knowledge_base: KnowledgeBaseAgentConfig = Field(default_factory=KnowledgeBaseAgentConfig)

@@ -10,9 +10,13 @@ import type {
   AudioSettings,
   Conversation,
   HealthData,
+  KnowledgeBase,
+  KnowledgeDocument,
   LLMRuntimeHealth,
   ModelPullTask,
   ModelsOverview,
+  RAGSettings,
+  RetrievalTestResult,
   SpeechRuntimeHealth,
   StreamEvent,
   STTModelInfo,
@@ -312,4 +316,129 @@ export function deleteVoiceSession(
 export function getVoiceWebSocketUrl(sessionId: string): string {
   const wsBase = API_BASE_URL.replace(/^http:/i, "ws:").replace(/^https:/i, "wss:");
   return `${wsBase}/api/v1/voice/sessions/${encodeURIComponent(sessionId)}/stream`;
+}
+
+// --- Phase 5: Knowledge Base & RAG ---
+
+export function fetchKnowledgeBases(): Promise<KnowledgeBase[]> {
+  return apiFetch<KnowledgeBase[]>("/api/v1/knowledge-bases");
+}
+
+export function createKnowledgeBase(payload: {
+  name: string;
+  description: string;
+  agent_ids?: string[];
+}): Promise<KnowledgeBase> {
+  return apiFetch<KnowledgeBase>("/api/v1/knowledge-bases", {
+    method: "POST",
+    body: JSON.stringify(payload),
+  });
+}
+
+export function fetchKnowledgeBase(kbId: string): Promise<KnowledgeBase> {
+  return apiFetch<KnowledgeBase>(`/api/v1/knowledge-bases/${encodeURIComponent(kbId)}`);
+}
+
+export function deleteKnowledgeBase(kbId: string): Promise<{ deleted: boolean; id: string }> {
+  return apiFetch<{ deleted: boolean; id: string }>(
+    `/api/v1/knowledge-bases/${encodeURIComponent(kbId)}`,
+    { method: "DELETE" },
+  );
+}
+
+export function enableKnowledgeBase(kbId: string): Promise<KnowledgeBase> {
+  return apiFetch<KnowledgeBase>(`/api/v1/knowledge-bases/${encodeURIComponent(kbId)}/enable`, {
+    method: "POST",
+  });
+}
+
+export function disableKnowledgeBase(kbId: string): Promise<KnowledgeBase> {
+  return apiFetch<KnowledgeBase>(`/api/v1/knowledge-bases/${encodeURIComponent(kbId)}/disable`, {
+    method: "POST",
+  });
+}
+
+export function fetchKBDocuments(kbId: string): Promise<KnowledgeDocument[]> {
+  return apiFetch<KnowledgeDocument[]>(
+    `/api/v1/knowledge-bases/${encodeURIComponent(kbId)}/documents`,
+  );
+}
+
+export async function uploadKBDocuments(
+  kbId: string,
+  files: File[],
+): Promise<KnowledgeDocument[]> {
+  const formData = new FormData();
+  for (const f of files) {
+    formData.append("files", f);
+  }
+  const url = `${API_BASE_URL}/api/v1/knowledge-bases/${encodeURIComponent(kbId)}/documents`;
+  const response = await fetch(url, { method: "POST", body: formData });
+  const payload = (await response.json()) as ApiResponse<KnowledgeDocument[]>;
+  if (!response.ok || !payload.success || !payload.data) {
+    throw new ApiClientError(
+      payload.error?.message ?? `Upload failed (${response.status})`,
+      payload.error?.code ?? "UPLOAD_FAILED",
+      response.status,
+    );
+  }
+  return payload.data;
+}
+
+export function deleteKBDocument(docId: string): Promise<{ deleted: boolean; id: string }> {
+  return apiFetch<{ deleted: boolean; id: string }>(
+    `/api/v1/documents/${encodeURIComponent(docId)}`,
+    { method: "DELETE" },
+  );
+}
+
+export function reprocessKBDocument(docId: string): Promise<KnowledgeDocument> {
+  return apiFetch<KnowledgeDocument>(
+    `/api/v1/documents/${encodeURIComponent(docId)}/reprocess`,
+    { method: "POST" },
+  );
+}
+
+export function assignKBToAgent(agentId: string, kbId: string): Promise<KnowledgeBase> {
+  return apiFetch<KnowledgeBase>(
+    `/api/v1/agents/${encodeURIComponent(agentId)}/knowledge-bases/${encodeURIComponent(kbId)}`,
+    { method: "POST" },
+  );
+}
+
+export function unassignKBFromAgent(agentId: string, kbId: string): Promise<KnowledgeBase> {
+  return apiFetch<KnowledgeBase>(
+    `/api/v1/agents/${encodeURIComponent(agentId)}/knowledge-bases/${encodeURIComponent(kbId)}`,
+    { method: "DELETE" },
+  );
+}
+
+export function searchKnowledgeBase(
+  kbId: string,
+  query: string,
+  topK = 5,
+  similarityThreshold = 0.25,
+): Promise<RetrievalTestResult> {
+  return apiFetch<RetrievalTestResult>(
+    `/api/v1/knowledge-bases/${encodeURIComponent(kbId)}/search`,
+    {
+      method: "POST",
+      body: JSON.stringify({
+        query,
+        top_k: topK,
+        similarity_threshold: similarityThreshold,
+      }),
+    },
+  );
+}
+
+export function fetchRAGSettings(): Promise<RAGSettings> {
+  return apiFetch<RAGSettings>("/api/v1/rag/settings");
+}
+
+export function updateRAGSettings(payload: RAGSettings): Promise<RAGSettings> {
+  return apiFetch<RAGSettings>("/api/v1/rag/settings", {
+    method: "PUT",
+    body: JSON.stringify(payload),
+  });
 }

@@ -12,6 +12,7 @@ import type {
 import { Check, ChevronLeft, ChevronRight, Sparkles } from "lucide-react";
 import Link from "next/link";
 import { useEffect, useMemo, useState } from "react";
+import { useKnowledgeBases } from "@/hooks/use-knowledge";
 import { useModelsOverview } from "@/hooks/use-models";
 import { AGENT_TYPE_LABELS } from "./agent-badges";
 
@@ -116,6 +117,12 @@ export function AgentForm({
   const modelsQuery = useModelsOverview();
   const installedModels = modelsQuery.data?.installed ?? [];
   const defaultModelId = modelsQuery.data?.default_model_id ?? null;
+
+  const kbsQuery = useKnowledgeBases();
+  const knowledgeBases = kbsQuery.data ?? [];
+  const [kbEnabled, setKbEnabled] = useState(initialAgent?.knowledge_base?.enabled ?? true);
+  const [kbId, setKbId] = useState(initialAgent?.knowledge_base?.knowledge_base_id ?? "");
+  const [kbTopK, setKbTopK] = useState(initialAgent?.knowledge_base?.top_k ?? 5);
 
   const [validationError, setValidationError] = useState<string | null>(null);
   const [dirty, setDirty] = useState(false);
@@ -226,6 +233,15 @@ export function AgentForm({
       temperature,
       max_tokens: maxTokens,
       context_window_messages: contextWindow,
+    },
+    knowledge_base: {
+      enabled: kbEnabled,
+      knowledge_base_id: kbId.trim() || null,
+      top_k: kbTopK,
+      similarity_threshold: initialAgent?.knowledge_base?.similarity_threshold ?? 0.25,
+      max_context_tokens: initialAgent?.knowledge_base?.max_context_tokens ?? 2000,
+      require_sources_for_company_facts: true,
+      fallback_when_not_found: true,
     },
   });
 
@@ -845,6 +861,70 @@ export function AgentForm({
                   className="mt-1.5 w-full rounded-lg border border-border bg-background px-3 py-2 text-sm focus:border-primary focus:outline-none"
                 />
               </div>
+            </div>
+
+            {/* Knowledge Base Assignment */}
+            <div className="border-t border-border pt-4 space-y-3">
+              <div className="flex items-center justify-between">
+                <label className="flex items-center gap-2 text-sm font-medium">
+                  <input
+                    type="checkbox"
+                    checked={kbEnabled}
+                    onChange={(e) => {
+                      markDirty();
+                      setKbEnabled(e.target.checked);
+                    }}
+                    className="rounded border-border"
+                  />
+                  <span>Enable Knowledge Base (RAG)</span>
+                </label>
+                <Link href="/knowledge-base" className="text-xs text-primary hover:underline">
+                  Manage Knowledge Bases
+                </Link>
+              </div>
+
+              {kbEnabled && (
+                <div className="grid gap-4 sm:grid-cols-2">
+                  <div>
+                    <label htmlFor="agent-kb-select" className="block text-xs font-medium">
+                      Assigned Knowledge Base
+                    </label>
+                    <select
+                      id="agent-kb-select"
+                      value={kbId}
+                      onChange={(e) => {
+                        markDirty();
+                        setKbId(e.target.value);
+                      }}
+                      className="mt-1 w-full rounded-lg border border-border bg-background px-3 py-2 text-sm"
+                    >
+                      <option value="">None (No Knowledge Base)</option>
+                      {knowledgeBases.map((kb) => (
+                        <option key={kb.id} value={kb.id}>
+                          {kb.name} ({kb.chunk_count} chunks)
+                        </option>
+                      ))}
+                    </select>
+                  </div>
+                  <div>
+                    <label htmlFor="agent-kb-topk" className="block text-xs font-medium">
+                      Top-K Retrieved Chunks
+                    </label>
+                    <input
+                      id="agent-kb-topk"
+                      type="number"
+                      min={1}
+                      max={20}
+                      value={kbTopK}
+                      onChange={(e) => {
+                        markDirty();
+                        setKbTopK(Number(e.target.value) || 5);
+                      }}
+                      className="mt-1 w-full rounded-lg border border-border bg-background px-3 py-2 text-sm"
+                    />
+                  </div>
+                </div>
+              )}
             </div>
           </div>
         )}

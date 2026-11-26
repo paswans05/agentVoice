@@ -63,7 +63,16 @@ See [docs/local-llm.md](local-llm.md) for Ollama setup and API details.
 
 See [docs/voice-engine.md](voice-engine.md) for setup and protocol details.
 
-## 6. Upcoming Phases
+## 6. Phase 5 — Knowledge Base & RAG (Implemented)
+
+- **Document Parsing & Chunking (`apps/api/app/services/document_parser.py`, `document_chunker.py`)**: Supports PDF, DOCX, TXT, Markdown, CSV, HTML, and JSON with configurable chunk size/overlap and metadata preservation.
+- **Embeddings & Local Vector Store (`apps/api/app/providers/embeddings/`, `vector_store/`)**: `EmbeddingProvider` (`intfloat/multilingual-e5-small`) and `LocalVectorStoreProvider` with per-agent isolation and JSON persistence.
+- **RAG Integration (`apps/api/app/services/rag_service.py`)**: Integrated into `ConversationService` and `PromptBuilder` for both Text and Voice Playgrounds, with source citations and prompt-injection guardrails.
+- **Frontend**: `/knowledge-base`, `/knowledge-base/[id]` (drag-and-drop upload, agent assignment, Retrieval Testing diagnostic), Agent Form KB selector, and grounded source citations in Playground.
+
+See [docs/knowledge-base.md](knowledge-base.md) for setup and API details.
+
+## 7. Upcoming Phases
 
 - **Phase 3 — Local AI Integration**: Ollama adapter implementing `LLMProvider`, model health/listing, streaming conversation API.
 - **Phase 4 — Speech Integration**: Local STT (`faster-whisper`), TTS (`Piper`), VAD (`Silero VAD`), WebSocket audio streaming.

@@ -68,6 +68,7 @@ class AgentService:
         language = payload.language
         voice = payload.voice
         model = payload.model
+        knowledge_base = payload.knowledge_base
         avatar = payload.avatar
         agent_type = payload.type
 
@@ -103,6 +104,7 @@ class AgentService:
             language=language,
             voice=voice,
             model=model,
+            knowledge_base=knowledge_base,
             created_at=now,
             updated_at=now,
             version=1,
@@ -133,6 +135,7 @@ class AgentService:
                 "language": language,
                 "voice": payload.voice,
                 "model": payload.model,
+                "knowledge_base": payload.knowledge_base,
             }
         )
 
