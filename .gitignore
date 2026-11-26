@@ -23,16 +23,10 @@ apps/web/next-env.d.ts
 .env.local
 .env.*.local
 
-# Local runtime data (keep directory structure via .gitkeep)
-agentvoice-data/config/*.json
-agentvoice-data/agents/*.json
-agentvoice-data/leads/*.jsonl
-agentvoice-data/conversations/*.jsonl
-agentvoice-data/campaigns/*.json
-agentvoice-data/calls/*.jsonl
-agentvoice-data/models/*.json
-agentvoice-data/logs/*.log
-agentvoice-data/backups/*
+# Local runtime data & downloaded models (keep directory structure via .gitkeep)
+agentvoice-data/**
+!agentvoice-data/
+!agentvoice-data/**/
 !agentvoice-data/**/.gitkeep
 
 # OS & IDE
