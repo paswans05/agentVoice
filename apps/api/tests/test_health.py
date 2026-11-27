@@ -55,4 +55,4 @@ def test_system_status_endpoint(tmp_path: Path) -> None:
     assert data["app_name"] == "agentVoice"
     assert data["external_ai_required"] is False
     assert data["offline_ready"] is True
-    assert data["phases"]["current_phase"] == 7
+    assert data["phases"]["current_phase"] == 8

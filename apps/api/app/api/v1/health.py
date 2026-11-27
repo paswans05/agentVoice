@@ -102,8 +102,8 @@ async def system_status(
             python_version=platform.python_version(),
         ),
         phases=PhaseInfo(
-            current_phase=7,
-            phase_name="Leads Management (Phases 1-5, 7 active; Phase 6 deferred)",
+            current_phase=8,
+            phase_name="Campaign Management (Phases 1-5, 7-8 active; Phase 6 deferred)",
         ),
     )
     return ok(payload, version=settings.app_version)

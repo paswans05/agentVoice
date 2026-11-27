@@ -602,3 +602,184 @@ export interface CSVImportResult {
   errors: { row_number: number; message: string }[];
   warnings: string[];
 }
+
+export type CampaignType =
+  | "SALES"
+  | "LEAD_QUALIFICATION"
+  | "APPOINTMENT_BOOKING"
+  | "CUSTOMER_FOLLOW_UP"
+  | "PRODUCT_INFORMATION"
+  | "CUSTOM";
+
+export type CampaignStatus =
+  | "DRAFT"
+  | "VALIDATING"
+  | "READY"
+  | "SCHEDULED"
+  | "RUNNING"
+  | "PAUSED"
+  | "STOPPING"
+  | "STOPPED"
+  | "COMPLETED"
+  | "FAILED"
+  | "CANCELLED";
+
+export type CampaignLeadStatus =
+  | "PENDING"
+  | "ELIGIBILITY_CHECK"
+  | "QUEUED"
+  | "INITIATING"
+  | "RINGING"
+  | "IN_PROGRESS"
+  | "COMPLETED"
+  | "NO_ANSWER"
+  | "BUSY"
+  | "FAILED"
+  | "SKIPPED"
+  | "RETRY_SCHEDULED"
+  | "EXHAUSTED"
+  | "DO_NOT_CONTACT";
+
+export type CallOutcome =
+  | "INTERESTED"
+  | "NOT_INTERESTED"
+  | "CALLBACK_REQUESTED"
+  | "APPOINTMENT_BOOKED"
+  | "NEEDS_HUMAN"
+  | "INFORMATION_REQUESTED"
+  | "NO_ANSWER"
+  | "BUSY"
+  | "WRONG_NUMBER"
+  | "DO_NOT_CALL"
+  | "FAILED";
+
+export interface Campaign {
+  id: string;
+  name: string;
+  description: string;
+  notes: string;
+  campaign_type: CampaignType;
+  status: CampaignStatus;
+  agent_id: string;
+  knowledge_base_id: string | null;
+  calling_purpose: string;
+  lead_group_ids: string[];
+  selected_lead_ids: string[];
+  timezone: string;
+  calling_days: number[];
+  start_date: string | null;
+  end_date: string | null;
+  start_time: string;
+  end_time: string;
+  maximum_calls: number;
+  maximum_concurrent_calls: number;
+  maximum_attempts_per_lead: number;
+  retry_interval_minutes: number;
+  minimum_interval_between_attempts_minutes: number;
+  dry_run: boolean;
+  telephony_provider: string;
+  recording_enabled: boolean;
+  created_at: string;
+  updated_at: string;
+  started_at: string | null;
+  paused_at: string | null;
+  completed_at: string | null;
+}
+
+export interface CampaignJob {
+  id: string;
+  idempotency_key: string;
+  campaign_id: string;
+  lead_id: string;
+  attempt_number: number;
+  status: CampaignLeadStatus;
+  error_message: string | null;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface CampaignCallRecord {
+  call_id: string;
+  campaign_id: string;
+  lead_id: string;
+  agent_id: string;
+  attempt_id: string;
+  provider_id: string;
+  provider_call_id: string | null;
+  is_dry_run: boolean;
+  started_at: string;
+  ended_at: string;
+  duration_seconds: number;
+  outcome: CallOutcome;
+  summary: string;
+}
+
+export interface CampaignEligibilitySummary {
+  campaign_id: string;
+  total_selected: number;
+  eligible_count: number;
+  ineligible_count: number;
+  suppressed_count: number;
+  unknown_consent_count: number;
+  invalid_phone_count: number;
+}
+
+export interface CampaignValidationResult {
+  valid: boolean;
+  errors: string[];
+  warnings: string[];
+  eligibility: CampaignEligibilitySummary | null;
+}
+
+export interface CampaignProgress {
+  campaign_id: string;
+  status: CampaignStatus;
+  dry_run: boolean;
+  total_jobs: number;
+  pending_jobs: number;
+  completed_jobs: number;
+  failed_jobs: number;
+  skipped_jobs: number;
+  retry_scheduled_jobs: number;
+}
+
+export interface CampaignAnalytics {
+  campaign_id: string;
+  total_selected_leads: number;
+  eligible_leads: number;
+  ineligible_leads: number;
+  queued_leads: number;
+  real_calls_initiated: number;
+  real_calls_completed: number;
+  real_calls_failed: number;
+  dry_run_calls_simulated: number;
+  no_answer_count: number;
+  busy_count: number;
+  interested_count: number;
+  not_interested_count: number;
+  callback_requests: number;
+  appointments_booked: number;
+  average_real_duration_seconds: number;
+  completion_rate_percent: number;
+}
+
+export interface CampaignAnalyticsOverview {
+  total_campaigns: number;
+  draft_campaigns: number;
+  scheduled_campaigns: number;
+  running_campaigns: number;
+  paused_campaigns: number;
+  completed_campaigns: number;
+  failed_campaigns: number;
+  total_real_calls: number;
+  total_dry_run_calls: number;
+}
+
+export interface TelephonyProviderInfo {
+  id: string;
+  name: string;
+  supports_real_calls: boolean;
+  configured: boolean;
+  status: string;
+  message: string;
+}

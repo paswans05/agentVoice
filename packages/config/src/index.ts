@@ -68,7 +68,7 @@ export const SIDEBAR_NAV_ITEMS: NavItemConfig[] = [
     label: "Campaigns",
     href: "/campaigns",
     phase: 8,
-    status: "planned",
+    status: "active",
     description: "Outbound calling workflows and schedules",
   },
   {
@@ -84,7 +84,7 @@ export const SIDEBAR_NAV_ITEMS: NavItemConfig[] = [
     label: "Call History",
     href: "/call-history",
     phase: 8,
-    status: "planned",
+    status: "active",
     description: "Review past call transcripts and summaries",
   },
   {
@@ -92,7 +92,7 @@ export const SIDEBAR_NAV_ITEMS: NavItemConfig[] = [
     label: "Analytics",
     href: "/analytics",
     phase: 8,
-    status: "planned",
+    status: "active",
     description: "Call performance, conversion, and agent metrics",
   },
   {

@@ -3,6 +3,7 @@
 from fastapi import APIRouter
 
 from .agents import router as agents_router
+from .campaigns import router as campaigns_router
 from .conversations import router as conversations_router
 from .health import router as health_router
 from .knowledge import router as knowledge_router
@@ -22,3 +23,4 @@ api_v1_router.include_router(speech_router)
 api_v1_router.include_router(voice_router)
 api_v1_router.include_router(knowledge_router)
 api_v1_router.include_router(leads_router)
+api_v1_router.include_router(campaigns_router)

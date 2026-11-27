@@ -8,6 +8,14 @@ import type {
   AgentUpdatePayload,
   ApiResponse,
   AudioSettings,
+  Campaign,
+  CampaignAnalytics,
+  CampaignAnalyticsOverview,
+  CampaignCallRecord,
+  CampaignEligibilitySummary,
+  CampaignJob,
+  CampaignProgress,
+  CampaignValidationResult,
   ConsentChannel,
   ConsentRecord,
   ConsentStatus,
@@ -35,6 +43,7 @@ import type {
   STTModelInfo,
   SuppressionRecord,
   SystemStatusData,
+  TelephonyProviderInfo,
   TTSVoiceInfo,
   VoiceSessionInfo,
 } from "@agentvoice/shared-types";
@@ -668,4 +677,107 @@ export async function exportLeadsCSV(payload: {
     throw new ApiClientError("Failed to export CSV", "EXPORT_ERROR", res.status);
   }
   return res.blob();
+}
+
+// --- Phase 8: Campaigns & Telephony Status ---
+
+export function fetchCampaigns(): Promise<Campaign[]> {
+  return apiFetch<Campaign[]>("/api/v1/campaigns");
+}
+
+export function fetchCampaign(campaignId: string): Promise<Campaign> {
+  return apiFetch<Campaign>(`/api/v1/campaigns/${encodeURIComponent(campaignId)}`);
+}
+
+export function createCampaign(payload: Partial<Campaign>): Promise<Campaign> {
+  return apiFetch<Campaign>("/api/v1/campaigns", {
+    method: "POST",
+    body: JSON.stringify(payload),
+  });
+}
+
+export function deleteCampaign(campaignId: string): Promise<{ deleted: boolean; id: string }> {
+  return apiFetch<{ deleted: boolean; id: string }>(
+    `/api/v1/campaigns/${encodeURIComponent(campaignId)}`,
+    { method: "DELETE" },
+  );
+}
+
+export function validateCampaign(campaignId: string): Promise<CampaignValidationResult> {
+  return apiFetch<CampaignValidationResult>(
+    `/api/v1/campaigns/${encodeURIComponent(campaignId)}/validate`,
+    { method: "POST" },
+  );
+}
+
+export function activateCampaign(
+  campaignId: string,
+  options?: { runInline?: boolean; bypassWindow?: boolean },
+): Promise<Campaign> {
+  const qs = new URLSearchParams();
+  if (options?.runInline) qs.set("run_inline", "true");
+  if (options?.bypassWindow) qs.set("bypass_window", "true");
+  const q = qs.toString();
+  return apiFetch<Campaign>(
+    `/api/v1/campaigns/${encodeURIComponent(campaignId)}/activate${q ? `?${q}` : ""}`,
+    { method: "POST" },
+  );
+}
+
+export function pauseCampaign(campaignId: string): Promise<Campaign> {
+  return apiFetch<Campaign>(`/api/v1/campaigns/${encodeURIComponent(campaignId)}/pause`, {
+    method: "POST",
+  });
+}
+
+export function stopCampaign(campaignId: string): Promise<Campaign> {
+  return apiFetch<Campaign>(`/api/v1/campaigns/${encodeURIComponent(campaignId)}/stop`, {
+    method: "POST",
+  });
+}
+
+export function cancelCampaign(campaignId: string): Promise<Campaign> {
+  return apiFetch<Campaign>(`/api/v1/campaigns/${encodeURIComponent(campaignId)}/cancel`, {
+    method: "POST",
+  });
+}
+
+export function fetchCampaignEligibility(campaignId: string): Promise<CampaignEligibilitySummary> {
+  return apiFetch<CampaignEligibilitySummary>(
+    `/api/v1/campaigns/${encodeURIComponent(campaignId)}/leads`,
+  );
+}
+
+export function fetchCampaignProgress(campaignId: string): Promise<CampaignProgress> {
+  return apiFetch<CampaignProgress>(
+    `/api/v1/campaigns/${encodeURIComponent(campaignId)}/progress`,
+  );
+}
+
+export function fetchCampaignJobs(campaignId: string): Promise<CampaignJob[]> {
+  return apiFetch<CampaignJob[]>(`/api/v1/campaigns/${encodeURIComponent(campaignId)}/jobs`);
+}
+
+export function fetchCampaignCalls(campaignId: string): Promise<CampaignCallRecord[]> {
+  return apiFetch<CampaignCallRecord[]>(
+    `/api/v1/campaigns/${encodeURIComponent(campaignId)}/calls`,
+  );
+}
+
+export function fetchCampaignAnalytics(campaignId: string): Promise<CampaignAnalytics> {
+  return apiFetch<CampaignAnalytics>(
+    `/api/v1/campaigns/${encodeURIComponent(campaignId)}/analytics`,
+  );
+}
+
+export function fetchCampaignOverview(): Promise<CampaignAnalyticsOverview> {
+  return apiFetch<CampaignAnalyticsOverview>("/api/v1/campaigns/analytics/overview");
+}
+
+export function fetchAllCalls(): Promise<CampaignCallRecord[]> {
+  return apiFetch<CampaignCallRecord[]>("/api/v1/calls");
+}
+
+export function fetchTelephonyProviders(): Promise<TelephonyProviderInfo[]> {
+  return apiFetch<TelephonyProviderInfo[]>("/api/v1/telephony/providers");
 }

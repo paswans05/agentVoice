@@ -80,7 +80,16 @@ See [docs/knowledge-base.md](knowledge-base.md) for setup and API details.
 
 See [docs/leads.md](leads.md) for details.
 
-## 8. Upcoming Phases
+## 8. Phase 8 — Campaign Management (Implemented)
+
+- **Telephony Abstraction (`apps/api/app/providers/telephony/`)**: `TelephonyProvider` interface, `DryRunTelephonyProvider`, and fail-closed `TelephonyProviderFactory` (real SIP/Asterisk deferred to Phase 9).
+- **Scheduling, Policy, Retry & Eligibility (`apps/api/app/services/campaign_policy.py`, `campaign_eligibility.py`)**: Timezone-aware calling windows (`zoneinfo` + `tzdata`), exponential retry backoff (never retrying opt-outs/DNC), and pre-call Phase 7 consent/suppression revalidation.
+- **Execution & Analytics (`apps/api/app/services/campaign_service.py`)**: Idempotent local queue (`campaigns/campaign_jobs_store.json`), bounded `asyncio` worker, pause/stop/cancel controls, and real-vs-dry-run separated analytics.
+- **Frontend**: `/campaigns`, `/campaigns/new` (6-step wizard), `/campaigns/[id]`, `/analytics`, `/call-history`.
+
+See [docs/campaigns.md](campaigns.md) for details.
+
+## 9. Upcoming Phases
 
 - **Phase 3 — Local AI Integration**: Ollama adapter implementing `LLMProvider`, model health/listing, streaming conversation API.
 - **Phase 4 — Speech Integration**: Local STT (`faster-whisper`), TTS (`Piper`), VAD (`Silero VAD`), WebSocket audio streaming.
