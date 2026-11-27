@@ -380,31 +380,7 @@ async def get_call(
     return ok(call, version=settings.app_version)
 
 
-# --- Telephony Provider Status (Phase 9 handles real SIP/Asterisk) ---
-
-@router.get("/telephony/providers", response_model=ApiResponse[list[TelephonyProviderInfo]])
-async def list_telephony_providers(
-    settings: Settings = Depends(get_settings),
-) -> ApiResponse[list[TelephonyProviderInfo]]:
-    providers = [
-        TelephonyProviderInfo(
-            id="dry_run",
-            name="Dry-Run Simulator (Local)",
-            supports_real_calls=False,
-            configured=True,
-            status="READY",
-            message="Simulates campaign execution locally without placing real phone calls.",
-        ),
-        TelephonyProviderInfo(
-            id="sip",
-            name="Authorized SIP Provider (Phase 9)",
-            supports_real_calls=True,
-            configured=False,
-            status="UNAVAILABLE",
-            message="Real SIP/Asterisk calling requires Phase 9 configuration.",
-        ),
-    ]
-    return ok(providers, version=settings.app_version)
+# --- Telephony Provider Status (compatible with Phase 8 Campaign checks) ---
 
 
 @router.get("/telephony/status", response_model=ApiResponse[dict[str, object]])

@@ -102,8 +102,8 @@ async def system_status(
             python_version=platform.python_version(),
         ),
         phases=PhaseInfo(
-            current_phase=9,
-            phase_name="Live Calls & Real-Time Monitoring (Phases 1-5, 7-9 active; Phase 6 deferred)",
+            current_phase=10,
+            phase_name="Telephony Integration (Phases 1-5, 7-10 active; Phase 6 deferred)",
         ),
     )
     return ok(payload, version=settings.app_version)

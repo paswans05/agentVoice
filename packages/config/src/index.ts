@@ -99,8 +99,8 @@ export const SIDEBAR_NAV_ITEMS: NavItemConfig[] = [
     id: "telephony",
     label: "Telephony",
     href: "/telephony",
-    phase: 9,
-    status: "planned",
+    phase: 10,
+    status: "active",
     description: "Authorized SIP, Asterisk, and GSM gateway setup",
   },
   {

@@ -98,7 +98,15 @@ See [docs/campaigns.md](campaigns.md) for details.
 
 See [docs/live-calls.md](live-calls.md) for details.
 
-## 10. Upcoming Phases
+## 10. Phase 10 — Telephony Integration (Implemented)
+
+- **Provider Adapters (`apps/api/app/providers/telephony/`)**: Extended `TelephonyProvider` with `AsteriskARIProvider` (ARI + PJSIP), `GsmGatewayProvider` (SIP-trunk or documented vendor API), `DryRunTelephonyProvider`, and `TelephonyMediaAdapter` (codec negotiation, G.711 PCMU/PCMA <-> PCM16 16 kHz, jitter buffering).
+- **Encrypted Secret Vault & Routing (`apps/api/app/repositories/telephony_repository.py`, `apps/api/app/services/telephony_service.py`)**: Encrypts SIP/ARI/webhook secrets at rest, validates inbound routes and active agents before answering, enforces caller ID/destination/consent/suppression gates on outbound calls, and verifies HMAC-SHA256 webhook signatures.
+- **Frontend**: `/telephony` dashboard and `/telephony/setup` 6-step provider configuration wizard.
+
+See [docs/telephony.md](telephony.md) for details.
+
+## 11. Upcoming Phases
 
 - **Phase 3 — Local AI Integration**: Ollama adapter implementing `LLMProvider`, model health/listing, streaming conversation API.
 - **Phase 4 — Speech Integration**: Local STT (`faster-whisper`), TTS (`Piper`), VAD (`Silero VAD`), WebSocket audio streaming.

@@ -27,7 +27,9 @@ import type {
   CSVImportPreviewResponse,
   CSVImportResult,
   EligibilityResult,
+  GsmGatewayRecord,
   HealthData,
+  InboundRouteRecord,
   KnowledgeBase,
   KnowledgeDocument,
   Lead,
@@ -42,14 +44,19 @@ import type {
   ModelPullTask,
   ModelsOverview,
   NormalizedCallEvent,
+  OutboundRouteRecord,
   RAGSettings,
   RetrievalTestResult,
+  SipTrunkRecord,
   SpeechRuntimeHealth,
   StreamEvent,
   STTModelInfo,
   SuppressionRecord,
   SystemStatusData,
+  TelephonyOverview,
   TelephonyProviderInfo,
+  TelephonyProviderRecord,
+  TelephonySettings,
   TranscriptSegment,
   TTSVoiceInfo,
   VoiceSessionInfo,
@@ -892,4 +899,135 @@ export function updateCallMonitoringSettings(
 export function getLiveCallsWebSocketUrl(): string {
   const base = API_BASE_URL.replace(/^http/, "ws");
   return `${base}/api/v1/live-calls/ws`;
+}
+
+// --- Phase 10: Telephony Integration ---
+
+export function fetchTelephonyOverview(): Promise<TelephonyOverview> {
+  return apiFetch<TelephonyOverview>("/api/v1/telephony/overview");
+}
+
+export function fetchTelephonyProviderRecords(): Promise<TelephonyProviderRecord[]> {
+  return apiFetch<TelephonyProviderRecord[]>("/api/v1/telephony/providers");
+}
+
+export function createTelephonyProvider(
+  payload: Record<string, unknown>,
+): Promise<TelephonyProviderRecord> {
+  return apiFetch<TelephonyProviderRecord>("/api/v1/telephony/providers", {
+    method: "POST",
+    body: JSON.stringify(payload),
+  });
+}
+
+export function testTelephonyProvider(providerId: string): Promise<Record<string, unknown>> {
+  return apiFetch<Record<string, unknown>>(
+    `/api/v1/telephony/providers/${encodeURIComponent(providerId)}/test`,
+    { method: "POST" },
+  );
+}
+
+export function deleteTelephonyProvider(providerId: string): Promise<{ deleted: boolean }> {
+  return apiFetch<{ deleted: boolean }>(
+    `/api/v1/telephony/providers/${encodeURIComponent(providerId)}`,
+    { method: "DELETE" },
+  );
+}
+
+export function fetchSipTrunks(): Promise<SipTrunkRecord[]> {
+  return apiFetch<SipTrunkRecord[]>("/api/v1/telephony/trunks");
+}
+
+export function createSipTrunk(payload: Record<string, unknown>): Promise<SipTrunkRecord> {
+  return apiFetch<SipTrunkRecord>("/api/v1/telephony/trunks", {
+    method: "POST",
+    body: JSON.stringify(payload),
+  });
+}
+
+export function testSipTrunk(trunkId: string): Promise<Record<string, unknown>> {
+  return apiFetch<Record<string, unknown>>(
+    `/api/v1/telephony/trunks/${encodeURIComponent(trunkId)}/test`,
+    { method: "POST" },
+  );
+}
+
+export function deleteSipTrunk(trunkId: string): Promise<{ deleted: boolean }> {
+  return apiFetch<{ deleted: boolean }>(`/api/v1/telephony/trunks/${encodeURIComponent(trunkId)}`, {
+    method: "DELETE",
+  });
+}
+
+export function fetchInboundRoutes(): Promise<InboundRouteRecord[]> {
+  return apiFetch<InboundRouteRecord[]>("/api/v1/telephony/inbound-routes");
+}
+
+export function createInboundRoute(payload: Record<string, unknown>): Promise<InboundRouteRecord> {
+  return apiFetch<InboundRouteRecord>("/api/v1/telephony/inbound-routes", {
+    method: "POST",
+    body: JSON.stringify(payload),
+  });
+}
+
+export function deleteInboundRoute(routeId: string): Promise<{ deleted: boolean }> {
+  return apiFetch<{ deleted: boolean }>(
+    `/api/v1/telephony/inbound-routes/${encodeURIComponent(routeId)}`,
+    { method: "DELETE" },
+  );
+}
+
+export function fetchOutboundRoutes(): Promise<OutboundRouteRecord[]> {
+  return apiFetch<OutboundRouteRecord[]>("/api/v1/telephony/outbound-routes");
+}
+
+export function createOutboundRoute(
+  payload: Record<string, unknown>,
+): Promise<OutboundRouteRecord> {
+  return apiFetch<OutboundRouteRecord>("/api/v1/telephony/outbound-routes", {
+    method: "POST",
+    body: JSON.stringify(payload),
+  });
+}
+
+export function deleteOutboundRoute(routeId: string): Promise<{ deleted: boolean }> {
+  return apiFetch<{ deleted: boolean }>(
+    `/api/v1/telephony/outbound-routes/${encodeURIComponent(routeId)}`,
+    { method: "DELETE" },
+  );
+}
+
+export function fetchGsmGateways(): Promise<GsmGatewayRecord[]> {
+  return apiFetch<GsmGatewayRecord[]>("/api/v1/telephony/gateways");
+}
+
+export function createGsmGateway(payload: Record<string, unknown>): Promise<GsmGatewayRecord> {
+  return apiFetch<GsmGatewayRecord>("/api/v1/telephony/gateways", {
+    method: "POST",
+    body: JSON.stringify(payload),
+  });
+}
+
+export function testGsmGateway(gatewayId: string): Promise<Record<string, unknown>> {
+  return apiFetch<Record<string, unknown>>(
+    `/api/v1/telephony/gateways/${encodeURIComponent(gatewayId)}/test`,
+    { method: "POST" },
+  );
+}
+
+export function deleteGsmGateway(gatewayId: string): Promise<{ deleted: boolean }> {
+  return apiFetch<{ deleted: boolean }>(
+    `/api/v1/telephony/gateways/${encodeURIComponent(gatewayId)}`,
+    { method: "DELETE" },
+  );
+}
+
+export function fetchTelephonySettings(): Promise<TelephonySettings> {
+  return apiFetch<TelephonySettings>("/api/v1/telephony/settings");
+}
+
+export function updateTelephonySettings(payload: TelephonySettings): Promise<TelephonySettings> {
+  return apiFetch<TelephonySettings>("/api/v1/telephony/settings", {
+    method: "PUT",
+    body: JSON.stringify(payload),
+  });
 }

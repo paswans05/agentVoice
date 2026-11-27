@@ -949,3 +949,163 @@ export type LiveCallsWsFrame =
       call_id: string;
       metrics: CallMetricsSnapshot;
     };
+
+// --- Phase 10: Telephony Integration ---
+
+export type TelephonyProviderType =
+  | "asterisk"
+  | "sip_trunk"
+  | "gsm_gateway"
+  | "dry_run"
+  | "custom";
+
+export type TransportProtocol = "UDP" | "TCP" | "TLS";
+
+export type ProviderConnectionStatus =
+  | "DISCONNECTED"
+  | "REGISTERING"
+  | "CONNECTED"
+  | "AUTH_FAILED"
+  | "NETWORK_ERROR"
+  | "UNAVAILABLE"
+  | "INCOMPLETE";
+
+export interface ProviderCapabilities {
+  inbound: boolean;
+  outbound: boolean;
+  hold: boolean;
+  transfer: boolean;
+  recording: boolean;
+  dtmf: boolean;
+  supported_codecs: string[];
+  max_concurrent_calls: number;
+}
+
+export interface TelephonyProviderRecord {
+  id: string;
+  name: string;
+  provider_type: TelephonyProviderType;
+  supports_real_calls: boolean;
+  configured: boolean;
+  status: ProviderConnectionStatus;
+  message: string;
+  host: string;
+  port: number;
+  use_tls: boolean;
+  transport: TransportProtocol;
+  username: string;
+  auth_username: string | null;
+  sip_domain: string | null;
+  outbound_proxy: string | null;
+  ari_base_url: string | null;
+  ari_app: string;
+  ari_username: string | null;
+  caller_id: string | null;
+  allowed_destinations: string[];
+  connection_timeout_seconds: number;
+  max_concurrent_calls: number;
+  supported_codecs: string[];
+  enabled: boolean;
+  has_password: boolean;
+  has_ari_password: boolean;
+  has_webhook_secret: boolean;
+  capabilities: ProviderCapabilities;
+  last_checked_at: string | null;
+  last_error: string | null;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface SipTrunkRecord {
+  id: string;
+  name: string;
+  provider_id: string;
+  host: string;
+  port: number;
+  transport: TransportProtocol;
+  username: string;
+  caller_id: string;
+  register_required: boolean;
+  allowed_destinations: string[];
+  codecs: string[];
+  max_concurrent_calls: number;
+  preferred: boolean;
+  enabled: boolean;
+  has_password: boolean;
+  status: ProviderConnectionStatus;
+  last_error: string | null;
+}
+
+export interface InboundRouteRecord {
+  id: string;
+  name: string;
+  phone_number: string;
+  sip_destination: string | null;
+  agent_id: string;
+  business_identity: string;
+  working_hours_timezone: string;
+  working_hours_start: string;
+  working_hours_end: string;
+  fallback_destination: string | null;
+  enabled: boolean;
+}
+
+export interface OutboundRouteRecord {
+  id: string;
+  name: string;
+  provider_id: string;
+  trunk_id: string | null;
+  caller_id: string;
+  destination_pattern: string;
+  priority: number;
+  require_dlt_template: boolean;
+  dlt_entity_id: string | null;
+  dlt_template_id: string | null;
+  enabled: boolean;
+}
+
+export interface GsmGatewayRecord {
+  id: string;
+  name: string;
+  vendor: string;
+  mode: string;
+  host: string;
+  port: number;
+  api_base_url: string | null;
+  max_channels: number;
+  active_channels: number;
+  signal_strength: number | null;
+  hardware_verified: boolean;
+  has_api_token: boolean;
+  enabled: boolean;
+  status: ProviderConnectionStatus;
+  last_error: string | null;
+}
+
+export interface TelephonySettings {
+  max_concurrent_calls: number;
+  audio_buffer_ms: number;
+  preferred_codecs: string[];
+  connection_timeout_seconds: number;
+  retry_limit: number;
+  enforce_trai_dlt_compliance: boolean;
+  require_caller_id_authorization: boolean;
+  block_open_sip_relay: boolean;
+  webhook_signature_required: boolean;
+}
+
+export interface TelephonyOverview {
+  connected_providers: number;
+  total_providers: number;
+  registered_trunks: number;
+  total_trunks: number;
+  inbound_routes: number;
+  outbound_routes: number;
+  active_gateways: number;
+  total_gateways: number;
+  active_telephony_calls: number;
+  failed_telephony_calls: number;
+  available_channels: number;
+  real_telephony_ready: boolean;
+  recent_errors: string[];
+}

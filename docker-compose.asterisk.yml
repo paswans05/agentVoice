@@ -1,0 +1,14 @@
+# Optional local development Asterisk PBX setup for agentVoice Phase 10.
+# Bind ARI and SIP ports to localhost / private network only — do NOT expose publicly.
+services:
+  asterisk:
+    image: andrius/asterisk:latest
+    container_name: agentvoice-asterisk-dev
+    restart: unless-stopped
+    ports:
+      - "127.0.0.1:8088:8088"
+      - "127.0.0.1:5060:5060/udp"
+      - "127.0.0.1:5060:5060/tcp"
+    environment:
+      - ARI_USER=${ASTERISK_ARI_USER:-agentvoice}
+      - ARI_PASSWORD=${ASTERISK_ARI_PASSWORD:-change-me-local-dev}
