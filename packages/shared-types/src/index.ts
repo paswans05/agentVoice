@@ -1242,3 +1242,66 @@ export interface TestingOverviewStats {
   by_category: Record<string, { total: number; passed: number; failed: number }>;
   by_execution_mode: Record<string, number>;
 }
+
+// --- Android & iPhone Device Gateway ---
+
+export type DevicePlatform = "android" | "ios";
+export type DeviceStatus = "PAIRING" | "ONLINE" | "OFFLINE" | "DEGRADED" | "REVOKED" | "ERROR";
+
+export interface DeviceCapabilityProfile {
+  platform: DevicePlatform;
+  cellular_call_initiation: boolean;
+  cellular_call_state: boolean;
+  cellular_audio_capture: boolean;
+  cellular_audio_injection: boolean;
+  cellular_audio_bridge_status: string;
+  voip_supported: boolean;
+  callkit_supported: boolean;
+  device_health: boolean;
+  ai_call_ready: boolean;
+}
+
+export interface DeviceHealthSnapshot {
+  battery_percent: number | null;
+  battery_charging: boolean | null;
+  network_type: string;
+  connected: boolean;
+  sim_present: boolean | null;
+  carrier_name: string | null;
+  signal_strength_dbm: number | null;
+  permissions: Record<string, boolean>;
+  last_error: string | null;
+  updated_at: string;
+}
+
+export interface MobileDevice {
+  id: string;
+  account_id: string;
+  device_name: string;
+  platform: DevicePlatform;
+  platform_version: string;
+  app_version: string;
+  device_status: DeviceStatus;
+  capability_profile: DeviceCapabilityProfile;
+  health: DeviceHealthSnapshot;
+  last_seen_at: string | null;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface PairingCodeRecord {
+  code: string;
+  account_id: string;
+  platform: DevicePlatform;
+  used: boolean;
+  expires_at: string;
+  created_at: string;
+}
+
+export interface DeviceEventRecord {
+  event_id: string;
+  device_id: string;
+  event_type: string;
+  timestamp: string;
+  payload: Record<string, unknown>;
+}

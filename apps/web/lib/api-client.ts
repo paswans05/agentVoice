@@ -27,6 +27,7 @@ import type {
   CSVImportPreviewResponse,
   CSVImportResult,
   CustomerPersona,
+  DeviceEventRecord,
   EligibilityResult,
   GsmGatewayRecord,
   HealthData,
@@ -42,10 +43,12 @@ import type {
   LeadStatus,
   LiveCallsStats,
   LLMRuntimeHealth,
+  MobileDevice,
   ModelPullTask,
   ModelsOverview,
   NormalizedCallEvent,
   OutboundRouteRecord,
+  PairingCodeRecord,
   RAGSettings,
   RetrievalTestResult,
   SipTrunkRecord,
@@ -1155,4 +1158,55 @@ export function runTestingAssistant(payload: {
 
 export function getTestReportExportUrl(runId: string, format: "json" | "csv" | "markdown"): string {
   return `${API_BASE_URL}/api/v1/testing/reports/${encodeURIComponent(runId)}?format=${format}`;
+}
+
+// --- Android & iPhone Device Gateway ---
+
+export function fetchMobileDevices(): Promise<MobileDevice[]> {
+  return apiFetch<MobileDevice[]>("/api/v1/devices");
+}
+
+export function fetchMobileDevice(deviceId: string): Promise<MobileDevice> {
+  return apiFetch<MobileDevice>(`/api/v1/devices/${encodeURIComponent(deviceId)}`);
+}
+
+export function createDevicePairingCode(payload: {
+  platform: "android" | "ios";
+  account_id?: string;
+  ttl_seconds?: number;
+}): Promise<PairingCodeRecord> {
+  return apiFetch<PairingCodeRecord>("/api/v1/devices/pairing-codes", {
+    method: "POST",
+    body: JSON.stringify(payload),
+  });
+}
+
+export function revokeMobileDevice(deviceId: string): Promise<MobileDevice> {
+  return apiFetch<MobileDevice>(`/api/v1/devices/${encodeURIComponent(deviceId)}/revoke`, {
+    method: "POST",
+  });
+}
+
+export function deleteMobileDevice(deviceId: string): Promise<{ deleted: boolean }> {
+  return apiFetch<{ deleted: boolean }>(`/api/v1/devices/${encodeURIComponent(deviceId)}`, {
+    method: "DELETE",
+  });
+}
+
+export function fetchDeviceEvents(deviceId: string): Promise<DeviceEventRecord[]> {
+  return apiFetch<DeviceEventRecord[]>(`/api/v1/devices/${encodeURIComponent(deviceId)}/events`);
+}
+
+export function sendDeviceCommand(
+  deviceId: string,
+  command_type: string,
+  payload: Record<string, unknown> = {},
+): Promise<Record<string, unknown>> {
+  return apiFetch<Record<string, unknown>>(
+    `/api/v1/devices/${encodeURIComponent(deviceId)}/commands`,
+    {
+      method: "POST",
+      body: JSON.stringify({ command_type, payload }),
+    },
+  );
 }

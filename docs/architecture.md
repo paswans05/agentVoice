@@ -113,7 +113,15 @@ See [docs/telephony.md](telephony.md) for details.
 
 See [docs/testing-lab.md](testing-lab.md) for details.
 
-## 12. Upcoming Phases
+## 12. Android & iPhone Device Gateway (Implemented)
+
+- **Backend Device Gateway (`apps/api/app/services/device_service.py`, `apps/api/app/api/v1/devices.py`)**: Single-use pairing codes, per-device revocable hashed tokens, capability discovery (enforcing `CELLULAR_AUDIO_BRIDGE_UNAVAILABLE`), heartbeat/health/command tracking, `MobileVoIPService` linked to `CallSessionService`, and authenticated `WS /api/v1/devices/ws`.
+- **Mobile App (`agentvoice-mobile/`)**: Flutter + Riverpod + Dio + `flutter_secure_storage` shared app with Kotlin (`DeviceGatewayPlugin.kt`) and Swift (`CallKitVoipBridge.swift`) native bridges.
+- **Web Dashboard**: `Telephony > Mobile Devices` (`/telephony/devices`), `/telephony/devices/[id]`, and 6-step pairing wizard (`/telephony/devices/wizard`).
+
+See [docs/mobile-devices.md](mobile-devices.md) for details.
+
+## 13. Upcoming Phases
 
 - **Phase 3 — Local AI Integration**: Ollama adapter implementing `LLMProvider`, model health/listing, streaming conversation API.
 - **Phase 4 — Speech Integration**: Local STT (`faster-whisper`), TTS (`Piper`), VAD (`Silero VAD`), WebSocket audio streaming.

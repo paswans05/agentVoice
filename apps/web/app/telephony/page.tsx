@@ -174,6 +174,12 @@ export default function TelephonyPage() {
             Refresh
           </button>
           <Link
+            href="/telephony/devices"
+            className="inline-flex items-center gap-1.5 rounded-lg border border-border px-3 py-2 text-xs font-medium hover:bg-muted"
+          >
+            Mobile Devices
+          </Link>
+          <Link
             href="/telephony/setup"
             className="inline-flex items-center gap-1.5 rounded-lg bg-primary px-4 py-2 text-xs font-medium text-primary-foreground hover:opacity-90"
           >

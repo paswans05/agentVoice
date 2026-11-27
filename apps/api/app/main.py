@@ -39,6 +39,11 @@ from app.services.agent_service import (
     AgentNotFoundError,
 )
 from app.services.conversation_service import ConversationNotFoundError
+from app.services.device_service import (
+    DeviceAuthError,
+    DeviceNotFoundError,
+    DevicePairingError,
+)
 from app.services.document_parser import DocumentParseError
 from app.services.knowledge_service import DocumentNotFoundError, KnowledgeBaseNotFoundError
 from app.services.live_calls_service import (
@@ -284,6 +289,27 @@ def create_app() -> FastAPI:
     ) -> JSONResponse:
         body = fail(code="NOT_FOUND", message=str(exc), version=settings.app_version)
         return JSONResponse(status_code=404, content=body.model_dump())
+
+    @app.exception_handler(DeviceNotFoundError)
+    async def device_not_found_handler(
+        request: Request, exc: DeviceNotFoundError
+    ) -> JSONResponse:
+        body = fail(code="NOT_FOUND", message=str(exc), version=settings.app_version)
+        return JSONResponse(status_code=404, content=body.model_dump())
+
+    @app.exception_handler(DeviceAuthError)
+    async def device_auth_handler(
+        request: Request, exc: DeviceAuthError
+    ) -> JSONResponse:
+        body = fail(code="DEVICE_FORBIDDEN", message=str(exc), version=settings.app_version)
+        return JSONResponse(status_code=403, content=body.model_dump())
+
+    @app.exception_handler(DevicePairingError)
+    async def device_pairing_handler(
+        request: Request, exc: DevicePairingError
+    ) -> JSONResponse:
+        body = fail(code="DEVICE_PAIRING_ERROR", message=str(exc), version=settings.app_version)
+        return JSONResponse(status_code=422, content=body.model_dump())
 
     @app.exception_handler(Exception)
     async def unhandled_exception_handler(request: Request, exc: Exception) -> JSONResponse:
