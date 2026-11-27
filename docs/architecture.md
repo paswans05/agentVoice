@@ -106,7 +106,14 @@ See [docs/live-calls.md](live-calls.md) for details.
 
 See [docs/telephony.md](telephony.md) for details.
 
-## 11. Upcoming Phases
+## 11. End-to-End Testing Lab & AI Client Simulator (Implemented)
+
+- **Simulator, Evaluator & Suites (`apps/api/app/services/testing_simulator.py`, `testing_suites.py`, `testing_orchestrator.py`)**: Reuses `ConversationService`, `STTService`, `TTSService`, `RetrievalService`, and `TelephonyManagementService` with 15 built-in personas, deterministic compliance assertions, JSON/CSV/Markdown report exports, and the autonomous `TestingAssistantService`.
+- **Frontend**: `/testing-lab` workspace with Overview, AI Client Simulator, Scenario Builder, Live Test launcher, specialized suites, Test History & Reports, and AI Testing Assistant.
+
+See [docs/testing-lab.md](testing-lab.md) for details.
+
+## 12. Upcoming Phases
 
 - **Phase 3 — Local AI Integration**: Ollama adapter implementing `LLMProvider`, model health/listing, streaming conversation API.
 - **Phase 4 — Speech Integration**: Local STT (`faster-whisper`), TTS (`Piper`), VAD (`Silero VAD`), WebSocket audio streaming.

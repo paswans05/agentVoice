@@ -26,6 +26,7 @@ import type {
   Conversation,
   CSVImportPreviewResponse,
   CSVImportResult,
+  CustomerPersona,
   EligibilityResult,
   GsmGatewayRecord,
   HealthData,
@@ -57,6 +58,9 @@ import type {
   TelephonyProviderInfo,
   TelephonyProviderRecord,
   TelephonySettings,
+  TestingOverviewStats,
+  TestRun,
+  TestScenario,
   TranscriptSegment,
   TTSVoiceInfo,
   VoiceSessionInfo,
@@ -1030,4 +1034,125 @@ export function updateTelephonySettings(payload: TelephonySettings): Promise<Tel
     method: "PUT",
     body: JSON.stringify(payload),
   });
+}
+
+// --- End-to-End Testing Lab & AI Client Simulator ---
+
+export function fetchTestingStatus(): Promise<TestingOverviewStats> {
+  return apiFetch<TestingOverviewStats>("/api/v1/testing/status");
+}
+
+export function fetchTestingPersonas(): Promise<CustomerPersona[]> {
+  return apiFetch<CustomerPersona[]>("/api/v1/testing/personas");
+}
+
+export function createTestingPersona(payload: Record<string, unknown>): Promise<CustomerPersona> {
+  return apiFetch<CustomerPersona>("/api/v1/testing/personas", {
+    method: "POST",
+    body: JSON.stringify(payload),
+  });
+}
+
+export function fetchTestingScenarios(): Promise<TestScenario[]> {
+  return apiFetch<TestScenario[]>("/api/v1/testing/scenarios");
+}
+
+export function createTestingScenario(payload: Record<string, unknown>): Promise<TestScenario> {
+  return apiFetch<TestScenario>("/api/v1/testing/scenarios", {
+    method: "POST",
+    body: JSON.stringify(payload),
+  });
+}
+
+export function deleteTestingScenario(scenarioId: string): Promise<{ deleted: boolean }> {
+  return apiFetch<{ deleted: boolean }>(
+    `/api/v1/testing/scenarios/${encodeURIComponent(scenarioId)}`,
+    { method: "DELETE" },
+  );
+}
+
+export function fetchTestRuns(): Promise<TestRun[]> {
+  return apiFetch<TestRun[]>("/api/v1/testing/runs");
+}
+
+export function runTestSimulation(payload: {
+  agent_id: string;
+  persona_id: string;
+  scenario_id?: string | null;
+  voice_enabled?: boolean;
+  max_turns?: number;
+}): Promise<TestRun> {
+  return apiFetch<TestRun>("/api/v1/testing/simulate", {
+    method: "POST",
+    body: JSON.stringify(payload),
+  });
+}
+
+export function rerunFailedTest(runId: string): Promise<TestRun> {
+  return apiFetch<TestRun>(`/api/v1/testing/runs/${encodeURIComponent(runId)}/rerun-failed`, {
+    method: "POST",
+  });
+}
+
+export function deleteTestRun(runId: string): Promise<{ deleted: boolean }> {
+  return apiFetch<{ deleted: boolean }>(`/api/v1/testing/runs/${encodeURIComponent(runId)}`, {
+    method: "DELETE",
+  });
+}
+
+export function runKbSuiteTest(payload: {
+  agent_id: string;
+  questions?: string[];
+}): Promise<Record<string, unknown>> {
+  return apiFetch<Record<string, unknown>>("/api/v1/testing/kb-tests", {
+    method: "POST",
+    body: JSON.stringify(payload),
+  });
+}
+
+export function runTelephonySuiteTest(payload: {
+  provider_id: string;
+  mode: "dry_run" | "real_test_call";
+  agent_id?: string;
+}): Promise<Record<string, unknown>> {
+  return apiFetch<Record<string, unknown>>("/api/v1/testing/telephony-tests", {
+    method: "POST",
+    body: JSON.stringify(payload),
+  });
+}
+
+export function runPerformanceSuiteTest(payload: {
+  agent_id: string;
+  concurrency: number;
+  iterations: number;
+}): Promise<Record<string, unknown>> {
+  return apiFetch<Record<string, unknown>>("/api/v1/testing/performance-tests", {
+    method: "POST",
+    body: JSON.stringify(payload),
+  });
+}
+
+export function runFailureRecoverySuiteTest(payload: {
+  agent_id: string;
+}): Promise<Record<string, unknown>> {
+  return apiFetch<Record<string, unknown>>("/api/v1/testing/failure-recovery-tests", {
+    method: "POST",
+    body: JSON.stringify(payload),
+  });
+}
+
+export function runTestingAssistant(payload: {
+  agent_id: string;
+  instruction: string;
+  execute: boolean;
+  voice_enabled?: boolean;
+}): Promise<Record<string, unknown>> {
+  return apiFetch<Record<string, unknown>>("/api/v1/testing/assistant", {
+    method: "POST",
+    body: JSON.stringify(payload),
+  });
+}
+
+export function getTestReportExportUrl(runId: string, format: "json" | "csv" | "markdown"): string {
+  return `${API_BASE_URL}/api/v1/testing/reports/${encodeURIComponent(runId)}?format=${format}`;
 }

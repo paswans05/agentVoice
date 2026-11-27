@@ -1109,3 +1109,136 @@ export interface TelephonyOverview {
   real_telephony_ready: boolean;
   recent_errors: string[];
 }
+
+// --- End-to-End Testing Lab & AI Client Simulator ---
+
+export type TestExecutionMode =
+  | "mocked"
+  | "local_simulation"
+  | "real_microphone"
+  | "real_telephony";
+
+export type TestCategory =
+  | "unit"
+  | "integration"
+  | "e2e"
+  | "voice"
+  | "ai_conversation"
+  | "telephony"
+  | "compliance"
+  | "performance";
+
+export type TestRunStatus =
+  | "PENDING"
+  | "RUNNING"
+  | "PASSED"
+  | "FAILED"
+  | "REQUIRES_REVIEW"
+  | "STOPPED"
+  | "ERROR";
+
+export interface CustomerPersona {
+  id: string;
+  name: string;
+  description: string;
+  language: string;
+  traits: string[];
+  sample_utterances: string[];
+  interrupt_probability: number;
+  silence_probability: number;
+  is_builtin: boolean;
+}
+
+export interface TestScenario {
+  id: string;
+  name: string;
+  agent_id: string | null;
+  persona_id: string;
+  language: string;
+  objective: string;
+  background: string;
+  difficulty: "easy" | "medium" | "hard";
+  expected_outcome: string;
+  max_duration_seconds: number;
+  max_turns: number;
+  interruption_enabled: boolean;
+  kb_questions: string[];
+  objection_requirements: string[];
+}
+
+export interface EvaluationAssertion {
+  rule_id: string;
+  category: string;
+  passed: boolean;
+  critical: boolean;
+  description: string;
+  evidence: string;
+}
+
+export interface ConversationEvaluation {
+  overall_score: number;
+  passed: boolean;
+  requires_review: boolean;
+  critical_failures: string[];
+  assertions: EvaluationAssertion[];
+  criteria_scores: Record<string, number>;
+  explanation: string;
+  manual_override_score: number | null;
+  manual_review_notes: string | null;
+}
+
+export interface SimulationTurn {
+  turn_number: number;
+  customer_text: string;
+  agent_text: string;
+  customer_audio_generated: boolean;
+  agent_audio_generated: boolean;
+  stt_ms: number | null;
+  llm_ttft_ms: number | null;
+  llm_total_ms: number | null;
+  tts_ms: number | null;
+  end_to_end_ms: number | null;
+  interrupted: boolean;
+  citations: Record<string, unknown>[];
+  timestamp: string;
+}
+
+export interface TestRun {
+  id: string;
+  agent_id: string;
+  agent_name: string;
+  scenario_id: string | null;
+  scenario_name: string;
+  persona_id: string;
+  category: TestCategory;
+  execution_mode: TestExecutionMode;
+  status: TestRunStatus;
+  model_id: string;
+  stt_provider: string;
+  tts_provider: string;
+  turns: SimulationTurn[];
+  evaluation: ConversationEvaluation | null;
+  avg_stt_ms: number | null;
+  avg_llm_ms: number | null;
+  avg_tts_ms: number | null;
+  error_logs: string[];
+  recommendations: string[];
+  started_at: string;
+  ended_at: string | null;
+}
+
+export interface TestingOverviewStats {
+  total_runs: number;
+  passed_runs: number;
+  failed_runs: number;
+  requires_review_runs: number;
+  avg_ai_response_ms: number | null;
+  avg_stt_ms: number | null;
+  avg_tts_ms: number | null;
+  completion_rate_percent: number;
+  avg_quality_score: number | null;
+  voice_pipeline_errors: number;
+  telephony_status: string;
+  by_category: Record<string, { total: number; passed: number; failed: number }>;
+  by_execution_mode: Record<string, number>;
+}

@@ -13,6 +13,7 @@ from .llm import router as llm_router
 from .models import router as models_router
 from .speech import router as speech_router
 from .telephony import router as telephony_router
+from .testing import router as testing_router
 from .voice import router as voice_router
 
 api_v1_router = APIRouter(prefix="/api/v1")
@@ -28,3 +29,4 @@ api_v1_router.include_router(leads_router)
 api_v1_router.include_router(campaigns_router)
 api_v1_router.include_router(live_calls_router)
 api_v1_router.include_router(telephony_router)
+api_v1_router.include_router(testing_router)

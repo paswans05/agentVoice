@@ -47,6 +47,7 @@ from app.services.live_calls_service import (
     CallSessionNotFoundError,
 )
 from app.services.telephony_service import TelephonyNotFoundError, TelephonyPolicyError
+from app.services.testing_simulator import TestingNotFoundError
 from app.services.voice_session_manager import VoiceSessionNotFoundError
 
 logger = logging.getLogger(__name__)
@@ -276,6 +277,13 @@ def create_app() -> FastAPI:
     ) -> JSONResponse:
         body = fail(code="TELEPHONY_POLICY_ERROR", message=str(exc), version=settings.app_version)
         return JSONResponse(status_code=422, content=body.model_dump())
+
+    @app.exception_handler(TestingNotFoundError)
+    async def testing_not_found_handler(
+        request: Request, exc: TestingNotFoundError
+    ) -> JSONResponse:
+        body = fail(code="NOT_FOUND", message=str(exc), version=settings.app_version)
+        return JSONResponse(status_code=404, content=body.model_dump())
 
     @app.exception_handler(Exception)
     async def unhandled_exception_handler(request: Request, exc: Exception) -> JSONResponse:

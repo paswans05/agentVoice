@@ -3,7 +3,7 @@ import test from "node:test";
 import fs from "node:fs";
 import path from "node:path";
 
-test("config package defines all 11 sidebar navigation items", () => {
+test("config package defines all 12 sidebar navigation items", () => {
   const configPath = path.resolve(import.meta.dirname, "../../../packages/config/src/index.ts");
   const content = fs.readFileSync(configPath, "utf8");
 
@@ -18,6 +18,7 @@ test("config package defines all 11 sidebar navigation items", () => {
     "call-history",
     "analytics",
     "telephony",
+    "testing-lab",
     "settings",
   ];
 

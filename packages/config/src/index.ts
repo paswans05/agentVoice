@@ -104,6 +104,14 @@ export const SIDEBAR_NAV_ITEMS: NavItemConfig[] = [
     description: "Authorized SIP, Asterisk, and GSM gateway setup",
   },
   {
+    id: "testing-lab",
+    label: "Testing Lab",
+    href: "/testing-lab",
+    phase: 10,
+    status: "active",
+    description: "End-to-end AI client simulator, voice, KB, and compliance testing",
+  },
+  {
     id: "settings",
     label: "Settings",
     href: "/settings",
