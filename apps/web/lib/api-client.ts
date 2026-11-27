@@ -16,6 +16,10 @@ import type {
   CampaignJob,
   CampaignProgress,
   CampaignValidationResult,
+  CallMetricsSnapshot,
+  CallMonitoringSettings,
+  CallSession,
+  CallSessionStatus,
   ConsentChannel,
   ConsentRecord,
   ConsentStatus,
@@ -33,9 +37,11 @@ import type {
   LeadListResponse,
   LeadPriority,
   LeadStatus,
+  LiveCallsStats,
   LLMRuntimeHealth,
   ModelPullTask,
   ModelsOverview,
+  NormalizedCallEvent,
   RAGSettings,
   RetrievalTestResult,
   SpeechRuntimeHealth,
@@ -44,6 +50,7 @@ import type {
   SuppressionRecord,
   SystemStatusData,
   TelephonyProviderInfo,
+  TranscriptSegment,
   TTSVoiceInfo,
   VoiceSessionInfo,
 } from "@agentvoice/shared-types";
@@ -780,4 +787,109 @@ export function fetchAllCalls(): Promise<CampaignCallRecord[]> {
 
 export function fetchTelephonyProviders(): Promise<TelephonyProviderInfo[]> {
   return apiFetch<TelephonyProviderInfo[]>("/api/v1/telephony/providers");
+}
+
+// --- Phase 9: Live Calls & Real-Time Monitoring ---
+
+export interface LiveCallsFilter {
+  active_only?: boolean;
+  status?: CallSessionStatus | "";
+  campaign_id?: string;
+  agent_id?: string;
+  search?: string;
+  limit?: number;
+}
+
+export function fetchLiveCalls(filters: LiveCallsFilter = {}): Promise<CallSession[]> {
+  const params = new URLSearchParams();
+  if (filters.active_only !== undefined) params.set("active_only", String(filters.active_only));
+  if (filters.status) params.set("status", filters.status);
+  if (filters.campaign_id) params.set("campaign_id", filters.campaign_id);
+  if (filters.agent_id) params.set("agent_id", filters.agent_id);
+  if (filters.search) params.set("search", filters.search);
+  if (filters.limit) params.set("limit", String(filters.limit));
+  const qs = params.toString();
+  return apiFetch<CallSession[]>(`/api/v1/live-calls${qs ? `?${qs}` : ""}`);
+}
+
+export function fetchLiveCallsStats(): Promise<LiveCallsStats> {
+  return apiFetch<LiveCallsStats>("/api/v1/live-calls/stats");
+}
+
+export function fetchLiveCallDetail(callId: string): Promise<CallSession> {
+  return apiFetch<CallSession>(`/api/v1/live-calls/${encodeURIComponent(callId)}`);
+}
+
+export function fetchCallEvents(callId: string): Promise<NormalizedCallEvent[]> {
+  return apiFetch<NormalizedCallEvent[]>(
+    `/api/v1/live-calls/${encodeURIComponent(callId)}/events`,
+  );
+}
+
+export function fetchCallTranscript(callId: string, query?: string): Promise<TranscriptSegment[]> {
+  const qs = query && query.trim() ? `?q=${encodeURIComponent(query.trim())}` : "";
+  return apiFetch<TranscriptSegment[]>(
+    `/api/v1/live-calls/${encodeURIComponent(callId)}/transcript${qs}`,
+  );
+}
+
+export function fetchCallMetrics(callId: string): Promise<CallMetricsSnapshot | null> {
+  return apiFetch<CallMetricsSnapshot | null>(
+    `/api/v1/live-calls/${encodeURIComponent(callId)}/metrics`,
+  );
+}
+
+export function terminateLiveCall(callId: string, reason?: string): Promise<CallSession> {
+  return apiFetch<CallSession>(`/api/v1/live-calls/${encodeURIComponent(callId)}/terminate`, {
+    method: "POST",
+    body: JSON.stringify({ reason: reason ?? "Terminated by operator" }),
+  });
+}
+
+export function holdLiveCall(callId: string): Promise<CallSession> {
+  return apiFetch<CallSession>(`/api/v1/live-calls/${encodeURIComponent(callId)}/hold`, {
+    method: "POST",
+  });
+}
+
+export function resumeLiveCall(callId: string): Promise<CallSession> {
+  return apiFetch<CallSession>(`/api/v1/live-calls/${encodeURIComponent(callId)}/resume`, {
+    method: "POST",
+  });
+}
+
+export function transferLiveCall(
+  callId: string,
+  destination: string,
+  reason?: string,
+): Promise<CallSession> {
+  return apiFetch<CallSession>(`/api/v1/live-calls/${encodeURIComponent(callId)}/transfer`, {
+    method: "POST",
+    body: JSON.stringify({ destination, reason: reason ?? "Operator transfer" }),
+  });
+}
+
+export function flagLiveCall(callId: string, reason: string): Promise<CallSession> {
+  return apiFetch<CallSession>(`/api/v1/live-calls/${encodeURIComponent(callId)}/flag`, {
+    method: "POST",
+    body: JSON.stringify({ reason }),
+  });
+}
+
+export function fetchCallMonitoringSettings(): Promise<CallMonitoringSettings> {
+  return apiFetch<CallMonitoringSettings>("/api/v1/live-calls/settings");
+}
+
+export function updateCallMonitoringSettings(
+  payload: CallMonitoringSettings,
+): Promise<CallMonitoringSettings> {
+  return apiFetch<CallMonitoringSettings>("/api/v1/live-calls/settings", {
+    method: "PUT",
+    body: JSON.stringify(payload),
+  });
+}
+
+export function getLiveCallsWebSocketUrl(): string {
+  const base = API_BASE_URL.replace(/^http/, "ws");
+  return `${base}/api/v1/live-calls/ws`;
 }

@@ -76,7 +76,7 @@ export const SIDEBAR_NAV_ITEMS: NavItemConfig[] = [
     label: "Live Calls",
     href: "/live-calls",
     phase: 9,
-    status: "planned",
+    status: "active",
     description: "Monitor active calls and live transcripts",
   },
   {

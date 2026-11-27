@@ -89,7 +89,16 @@ See [docs/leads.md](leads.md) for details.
 
 See [docs/campaigns.md](campaigns.md) for details.
 
-## 9. Upcoming Phases
+## 9. Phase 9 — Live Calls & Real-Time Monitoring (Implemented)
+
+- **CallSession & Normalized Events (`apps/api/app/services/live_calls_service.py`, `apps/api/app/repositories/call_session_repository.py`)**: Tracks active and historical `CallSession` lifecycles, deduplicated `NormalizedCallEvent` streams, partial/final `TranscriptSegment` records, and latency `CallMetricsSnapshot` metrics via `StorageProvider`. Recording is disabled by default (`recording_enabled=False`) and customer numbers are masked.
+- **WebSocket Fan-Out (`apps/api/app/services/ws_manager.py`, `WS /api/v1/live-calls/ws`)**: Bounded per-client `asyncio.Queue` hub with `SUBSCRIBE`, `UNSUBSCRIBE`, and `PING`/`PONG` heartbeat plus `CallAuthorizationService` enforcement when `require_auth=True`.
+- **Voice Session Bridge (`apps/api/app/api/v1/voice.py`)**: Non-blocking bridge from Phase 4 browser voice sessions into `CallSessionService` for real-time monitoring.
+- **Frontend**: `/live-calls` and `/live-calls/[id]` using `apps/web/hooks/use-live-calls.ts`.
+
+See [docs/live-calls.md](live-calls.md) for details.
+
+## 10. Upcoming Phases
 
 - **Phase 3 — Local AI Integration**: Ollama adapter implementing `LLMProvider`, model health/listing, streaming conversation API.
 - **Phase 4 — Speech Integration**: Local STT (`faster-whisper`), TTS (`Piper`), VAD (`Silero VAD`), WebSocket audio streaming.

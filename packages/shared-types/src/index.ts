@@ -783,3 +783,169 @@ export interface TelephonyProviderInfo {
   status: string;
   message: string;
 }
+
+// --- Phase 9: Live Calls & Real-Time Monitoring ---
+
+export type CallSessionType = "BROWSER" | "TELEPHONY" | "INTERNAL_TEST";
+
+export type CallDirection = "INBOUND" | "OUTBOUND";
+
+export type CallSessionStatus =
+  | "CREATED"
+  | "INITIATING"
+  | "RINGING"
+  | "ANSWERED"
+  | "ACTIVE"
+  | "ON_HOLD"
+  | "TRANSFERRING"
+  | "COMPLETED"
+  | "FAILED"
+  | "BUSY"
+  | "NO_ANSWER"
+  | "TERMINATED"
+  | "DISCONNECTED";
+
+export type CallEventType =
+  | "CALL_CREATED"
+  | "CALL_INITIATING"
+  | "CALL_RINGING"
+  | "CALL_ANSWERED"
+  | "CALL_STARTED"
+  | "CALL_ENDED"
+  | "CALL_FAILED"
+  | "CALL_DISCONNECTED"
+  | "CALL_ON_HOLD"
+  | "CALL_RESUMED"
+  | "CALL_TRANSFER_STARTED"
+  | "CALL_TRANSFER_COMPLETED"
+  | "SPEECH_DETECTED"
+  | "TRANSCRIPTION_PARTIAL"
+  | "TRANSCRIPTION_FINAL"
+  | "AI_THINKING"
+  | "AI_RESPONSE_STARTED"
+  | "AI_RESPONSE_COMPLETED"
+  | "TTS_STARTED"
+  | "TTS_COMPLETED"
+  | "CALL_WARNING"
+  | "CALL_ERROR"
+  | "CONSENT_CAPTURED"
+  | "DO_NOT_CALL_REQUESTED"
+  | "HUMAN_HANDOFF_REQUESTED";
+
+export type TranscriptSpeaker =
+  | "CUSTOMER"
+  | "AI_AGENT"
+  | "HUMAN_OPERATOR"
+  | "SYSTEM";
+
+export interface CallSession {
+  id: string;
+  external_call_id: string | null;
+  provider_call_id: string | null;
+  campaign_id: string | null;
+  campaign_lead_id: string | null;
+  lead_id: string | null;
+  agent_id: string;
+  conversation_id: string | null;
+  session_type: CallSessionType;
+  direction: CallDirection;
+  status: CallSessionStatus;
+  caller_number_masked: string;
+  destination_number_masked: string;
+  started_at: string;
+  answered_at: string | null;
+  ended_at: string | null;
+  duration_seconds: number;
+  current_speaker: TranscriptSpeaker | null;
+  current_agent_state: string;
+  last_activity_at: string;
+  outcome: string | null;
+  end_reason: string | null;
+  flagged_for_review: boolean;
+  flag_reason: string | null;
+  provider: string;
+  recording_enabled: boolean;
+  metadata: Record<string, unknown>;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface NormalizedCallEvent {
+  event_id: string;
+  call_id: string;
+  event_type: CallEventType;
+  timestamp: string;
+  sequence_number: number;
+  source: string;
+  payload: Record<string, unknown>;
+  metadata: Record<string, unknown>;
+}
+
+export interface TranscriptSegment {
+  segment_id: string;
+  call_id: string;
+  speaker: TranscriptSpeaker;
+  text: string;
+  final: boolean;
+  start_time_ms: number | null;
+  end_time_ms: number | null;
+  timestamp: string;
+  language: string | null;
+  confidence: number | null;
+  source: string;
+}
+
+export interface CallMetricsSnapshot {
+  call_id: string;
+  stt_latency_ms: number | null;
+  llm_ttft_ms: number | null;
+  llm_total_ms: number | null;
+  tts_latency_ms: number | null;
+  end_to_end_ms: number | null;
+  provider_healthy: boolean;
+  updated_at: string;
+}
+
+export interface LiveCallsStats {
+  active_calls: number;
+  ringing_calls: number;
+  in_progress_calls: number;
+  on_hold_calls: number;
+  attention_required_calls: number;
+  recently_completed_calls: number;
+  provider_status: string;
+}
+
+export interface CallMonitoringSettings {
+  recording_enabled_by_default: boolean;
+  require_explicit_recording_consent: boolean;
+  transcript_retention_days: number;
+  mask_customer_numbers: boolean;
+  heartbeat_interval_seconds: number;
+}
+
+export type LiveCallsWsFrame =
+  | { type: "CONNECTED"; client_id: string; heartbeat_interval_seconds: number }
+  | { type: "PONG" }
+  | { type: "SUBSCRIBED" }
+  | { type: "UNSUBSCRIBED" }
+  | { type: "ERROR"; message: string }
+  | {
+      type: "CALL_EVENT";
+      event_type: CallEventType;
+      call_id: string;
+      timestamp: string;
+      sequence_number: number;
+      data: Record<string, unknown>;
+      metadata: Record<string, unknown>;
+    }
+  | {
+      type: "TRANSCRIPT_SEGMENT";
+      call_id: string;
+      segment: TranscriptSegment;
+    }
+  | {
+      type: "METRICS_UPDATED";
+      call_id: string;
+      metrics: CallMetricsSnapshot;
+    };

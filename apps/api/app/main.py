@@ -41,6 +41,11 @@ from app.services.agent_service import (
 from app.services.conversation_service import ConversationNotFoundError
 from app.services.document_parser import DocumentParseError
 from app.services.knowledge_service import DocumentNotFoundError, KnowledgeBaseNotFoundError
+from app.services.live_calls_service import (
+    CallAuthorizationError,
+    CallControlUnsupportedError,
+    CallSessionNotFoundError,
+)
 from app.services.voice_session_manager import VoiceSessionNotFoundError
 
 logger = logging.getLogger(__name__)
@@ -235,6 +240,27 @@ def create_app() -> FastAPI:
     ) -> JSONResponse:
         body = fail(code="EMBEDDING_ERROR", message=str(exc), version=settings.app_version)
         return JSONResponse(status_code=502, content=body.model_dump())
+
+    @app.exception_handler(CallSessionNotFoundError)
+    async def call_session_not_found_handler(
+        request: Request, exc: CallSessionNotFoundError
+    ) -> JSONResponse:
+        body = fail(code="NOT_FOUND", message=str(exc), version=settings.app_version)
+        return JSONResponse(status_code=404, content=body.model_dump())
+
+    @app.exception_handler(CallControlUnsupportedError)
+    async def call_control_unsupported_handler(
+        request: Request, exc: CallControlUnsupportedError
+    ) -> JSONResponse:
+        body = fail(code="CALL_CONTROL_UNSUPPORTED", message=str(exc), version=settings.app_version)
+        return JSONResponse(status_code=422, content=body.model_dump())
+
+    @app.exception_handler(CallAuthorizationError)
+    async def call_auth_handler(
+        request: Request, exc: CallAuthorizationError
+    ) -> JSONResponse:
+        body = fail(code="FORBIDDEN", message=str(exc), version=settings.app_version)
+        return JSONResponse(status_code=403, content=body.model_dump())
 
     @app.exception_handler(Exception)
     async def unhandled_exception_handler(request: Request, exc: Exception) -> JSONResponse:
