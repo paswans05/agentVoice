@@ -26,6 +26,8 @@ from app.schemas.devices import (
     MobileVoIPSessionCreate,
     PairingCodeCreate,
     PairingCodePublic,
+    WebRTCSession,
+    WebRTCSessionCreate,
 )
 from app.schemas.live_calls import CallDirection, CallSessionStatus, CallSessionType
 from app.services.live_calls_service import CallSessionService
@@ -361,5 +363,93 @@ class MobileVoIPService:
             session.device_id,
             DeviceEventType.VOIP_DISCONNECTED,
             {"voip_session_id": session.id},
+        )
+        return ended
+
+
+class WebRTCSessionService:
+    """Manages authenticated browser WebRTC voice sessions linked to CallSessionService."""
+
+    def __init__(
+        self,
+        repo: DeviceRepository,
+        registry: DeviceRegistryService,
+        events: DeviceEventService,
+        call_svc: CallSessionService,
+    ) -> None:
+        self._repo = repo
+        self._registry = registry
+        self._events = events
+        self._calls = call_svc
+
+    async def create_session(self, req: WebRTCSessionCreate) -> WebRTCSession:
+        dev = self._registry.get_device(req.device_id)
+        if dev.device_status == DeviceStatus.REVOKED:
+            raise DeviceAuthError("Revoked device cannot start WebRTC sessions.")
+
+        call_session = await self._calls.create_session(
+            agent_id=req.agent_id,
+            session_type=CallSessionType.BROWSER,
+            direction=CallDirection.INBOUND,
+            provider="browser_webrtc",
+            external_call_id=req.voice_session_id,
+        )
+        webrtc = WebRTCSession(
+            id=f"wrtc_{uuid.uuid4().hex[:10]}",
+            device_id=dev.id,
+            agent_id=req.agent_id,
+            call_session_id=call_session.id,
+            voice_session_id=req.voice_session_id,
+            call_source="AGENTVOICE_INTERNET_VOICE_CALL",
+            status="ACTIVE",
+            ice_state="checking",
+            stun_urls=req.stun_urls,
+        )
+        saved = self._repo.save_webrtc_session(webrtc)
+        self._events.emit(
+            dev.id,
+            DeviceEventType.VOIP_CONNECTED,
+            {
+                "webrtc_session_id": saved.id,
+                "call_session_id": call_session.id,
+                "call_source": "AGENTVOICE_INTERNET_VOICE_CALL",
+            },
+        )
+        return saved
+
+    def get_session(self, session_id: str) -> WebRTCSession:
+        for s in self._repo.list_webrtc_sessions():
+            if s.id == session_id:
+                return s
+        raise DeviceNotFoundError(f"WebRTC session '{session_id}' not found.")
+
+    def update_ice_state(self, session_id: str, ice_state: str) -> WebRTCSession:
+        session = self.get_session(session_id)
+        return self._repo.save_webrtc_session(session.model_copy(update={"ice_state": ice_state}))
+
+    async def terminate_session(self, session_id: str) -> WebRTCSession:
+        session = self.get_session(session_id)
+        if session.call_session_id:
+            try:
+                await self._calls.end_session(
+                    session.call_session_id,
+                    status=CallSessionStatus.COMPLETED,
+                    end_reason="WebRTC browser session ended",
+                )
+            except Exception:
+                pass
+        ended = self._repo.save_webrtc_session(
+            session.model_copy(
+                update={
+                    "status": "TERMINATED",
+                    "ice_state": "closed",
+                    "ended_at": datetime.now(timezone.utc),
+                }
+            )
+        )
+        self._events.emit(
+            session.device_id,
+            DeviceEventType.VOIP_DISCONNECTED,
+            {"webrtc_session_id": session.id},
         )
         return ended

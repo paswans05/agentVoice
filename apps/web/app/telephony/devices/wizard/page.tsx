@@ -17,7 +17,7 @@ export default function MobileDeviceWizardPage() {
 
   const handleGenerateCode = async () => {
     try {
-      const res = await createDevicePairingCode({ platform, ttl_seconds: 300 });
+      const res = await createDevicePairingCode({ platform, ttl_seconds: 60 });
       setPairing(res);
       setErrorMsg(null);
       setStep(2);
@@ -72,9 +72,9 @@ export default function MobileDeviceWizardPage() {
                   platform === "ios" ? "border-primary bg-primary/5" : "border-border"
                 }`}
               >
-                <div className="font-medium text-sm">iPhone Companion</div>
+                <div className="font-medium text-sm">iPhone Safari Web Gateway / Companion</div>
                 <div className="text-xs text-muted-foreground mt-1">
-                  Swift + Keychain + CallKit VoIP (app-level VoIP only)
+                  Browser WebRTC via iOS Safari (no native app required) or CallKit Companion
                 </div>
               </button>
             </div>

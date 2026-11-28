@@ -28,6 +28,9 @@ from app.schemas.devices import (
     MobileVoIPSessionCreate,
     PairingCodeCreate,
     PairingCodePublic,
+    PairingConfirmRequest,
+    WebRTCSession,
+    WebRTCSessionCreate,
 )
 from app.schemas.response import ApiResponse, ok
 from app.services.device_service import (
@@ -36,6 +39,7 @@ from app.services.device_service import (
     DevicePairingService,
     DeviceRegistryService,
     MobileVoIPService,
+    WebRTCSessionService,
 )
 from app.services.live_calls_service import (
     CallAuthorizationError,
@@ -91,6 +95,15 @@ def get_mobile_voip_service(
     return MobileVoIPService(repo, registry, events, call_svc)
 
 
+def get_webrtc_session_service(
+    repo: DeviceRepository = Depends(get_device_repo),
+    registry: DeviceRegistryService = Depends(get_device_registry),
+    events: DeviceEventService = Depends(get_device_events),
+    call_svc: CallSessionService = Depends(get_call_session_service),
+) -> WebRTCSessionService:
+    return WebRTCSessionService(repo, registry, events, call_svc)
+
+
 def _require_operator(settings: Settings, authorization: str | None) -> None:
     if not CallAuthorizationService.authorize(settings, authorization):
         raise CallAuthorizationError("Operator authorization is required.")
@@ -98,6 +111,11 @@ def _require_operator(settings: Settings, authorization: str | None) -> None:
 
 @router.post(
     "/devices/pairing-codes",
+    response_model=ApiResponse[PairingCodePublic],
+    status_code=status.HTTP_201_CREATED,
+)
+@router.post(
+    "/devices/pairing",
     response_model=ApiResponse[PairingCodePublic],
     status_code=status.HTTP_201_CREATED,
 )
@@ -109,6 +127,17 @@ async def create_pairing_code(
 ) -> ApiResponse[PairingCodePublic]:
     _require_operator(settings, authorization)
     return ok(pairing.create_pairing_code(payload), version=settings.app_version)
+
+
+@router.post("/devices/pairing/confirm", response_model=ApiResponse[Device])
+async def confirm_device_pairing(
+    payload: PairingConfirmRequest,
+    authorization: str | None = Header(default=None),
+    settings: Settings = Depends(get_settings),
+    registry: DeviceRegistryService = Depends(get_device_registry),
+) -> ApiResponse[Device]:
+    _require_operator(settings, authorization)
+    return ok(registry.get_device(payload.device_id), version=settings.app_version)
 
 
 @router.post("/devices/pair", response_model=ApiResponse[DevicePairResponse], status_code=status.HTTP_201_CREATED)
@@ -270,6 +299,91 @@ async def terminate_mobile_voip_session(
 ) -> ApiResponse[MobileVoIPSession]:
     _require_operator(settings, authorization)
     return ok(await voip.terminate_session(session_id), version=settings.app_version)
+
+
+# --- Browser WebRTC Sessions & Signaling ---
+
+@router.post("/webrtc/sessions", response_model=ApiResponse[WebRTCSession], status_code=status.HTTP_201_CREATED)
+async def create_webrtc_session(
+    payload: WebRTCSessionCreate,
+    x_device_token: str | None = Header(default=None),
+    authorization: str | None = Header(default=None),
+    settings: Settings = Depends(get_settings),
+    auth: DeviceAuthenticationService = Depends(get_device_auth),
+    webrtc: WebRTCSessionService = Depends(get_webrtc_session_service),
+) -> ApiResponse[WebRTCSession]:
+    token = x_device_token or authorization
+    if token:
+        auth.authenticate(payload.device_id, token)
+    elif not CallAuthorizationService.authorize(settings, None):
+        raise CallAuthorizationError("Device or operator authorization required.")
+    return ok(await webrtc.create_session(payload), version=settings.app_version)
+
+
+@router.get("/webrtc/sessions/{session_id}", response_model=ApiResponse[WebRTCSession])
+async def get_webrtc_session(
+    session_id: str,
+    settings: Settings = Depends(get_settings),
+    webrtc: WebRTCSessionService = Depends(get_webrtc_session_service),
+) -> ApiResponse[WebRTCSession]:
+    return ok(webrtc.get_session(session_id), version=settings.app_version)
+
+
+@router.post("/webrtc/sessions/{session_id}/terminate", response_model=ApiResponse[WebRTCSession])
+async def terminate_webrtc_session(
+    session_id: str,
+    settings: Settings = Depends(get_settings),
+    webrtc: WebRTCSessionService = Depends(get_webrtc_session_service),
+) -> ApiResponse[WebRTCSession]:
+    return ok(await webrtc.terminate_session(session_id), version=settings.app_version)
+
+
+@router.websocket("/webrtc/ws")
+async def webrtc_signaling_websocket(
+    websocket: WebSocket,
+    settings: Settings = Depends(get_settings),
+    auth: DeviceAuthenticationService = Depends(get_device_auth),
+    webrtc: WebRTCSessionService = Depends(get_webrtc_session_service),
+) -> None:
+    device_id = websocket.query_params.get("device_id")
+    token = websocket.headers.get("authorization") or websocket.query_params.get("token")
+    authorized = False
+    if device_id and token:
+        try:
+            auth.authenticate(device_id, token)
+            authorized = True
+        except Exception:
+            authorized = False
+    elif CallAuthorizationService.authorize(settings, token):
+        authorized = True
+
+    if not authorized:
+        await websocket.close(code=4403)
+        return
+
+    await websocket.accept()
+    await websocket.send_json({"type": "SIGNALING_CONNECTED"})
+    try:
+        while True:
+            raw = await websocket.receive_text()
+            try:
+                frame = json.loads(raw)
+            except json.JSONDecodeError:
+                continue
+            if not isinstance(frame, dict):
+                continue
+            msg_type = str(frame.get("type") or "").upper()
+            session_id = frame.get("session_id")
+            if msg_type == "PING":
+                await websocket.send_json({"type": "PONG"})
+            elif msg_type == "ICE_STATE" and isinstance(session_id, str):
+                state = str(frame.get("state") or "checking")
+                webrtc.update_ice_state(session_id, state)
+                await websocket.send_json({"type": "ICE_STATE_ACK", "session_id": session_id, "state": state})
+            elif msg_type in ("OFFER", "ANSWER", "ICE_CANDIDATE"):
+                await websocket.send_json({"type": f"{msg_type}_ACK", "session_id": session_id})
+    except WebSocketDisconnect:
+        pass
 
 
 @router.websocket("/devices/ws")

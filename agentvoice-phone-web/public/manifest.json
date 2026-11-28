@@ -1,0 +1,9 @@
+{
+  "name": "agentVoice Phone Gateway",
+  "short_name": "agentVoice",
+  "description": "Your AI. Your Voice. Your Infrastructure. Browser-based iPhone Safari WebRTC Gateway.",
+  "start_url": "/",
+  "display": "standalone",
+  "background_color": "#09090b",
+  "theme_color": "#2563eb"
+}

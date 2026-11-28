@@ -28,6 +28,7 @@ agentVoice is an open-source, self-hosted, local-first AI voice agent platform. 
 - **Telephony Integration** (`/telephony`, `/telephony/setup`): Asterisk ARI + PJSIP adapter, SIP trunks, inbound/outbound routes, authorized GSM gateway adapter, encrypted secret vault, and G.711 PCMU/PCMA media conversion.
 - **Testing Lab & AI Client Simulator** (`/testing-lab`): 15+ customer personas, text and voice-to-voice simulation, deterministic compliance evaluation, KB/telephony/performance/recovery suites, and autonomous Testing Assistant.
 - **Mobile Device Gateway** (`/telephony/devices`, `agentvoice-mobile/`): Android & iPhone device pairing, revocable per-device credentials, health/capability reporting, and CallKit VoIP companion.
+- **iPhone Safari Web Gateway** (`agentvoice-phone-web/`): Browser-based PWA + WebRTC/WSS gateway for iPhone Safari over local Wi-Fi HTTPS without installing a native iOS app.
 
 > **Note**: Phase 6 (Sales Agent Intelligence) is currently deferred.
 
@@ -40,6 +41,7 @@ agentVoice is an open-source, self-hosted, local-first AI voice agent platform. 
 - `packages/ui` — Shared UI tokens
 - `voice-engine` — Modular STT, LLM, TTS, VAD, and conversation interfaces
 - `agentvoice-mobile` — Flutter + Kotlin + Swift companion app (requires Flutter/Android/Xcode SDKs)
+- `agentvoice-phone-web` — Next.js mobile-first PWA for iPhone Safari WebRTC voice sessions (no native iOS app required)
 - `agentvoice-data` — Local-first JSON/JSONL data directory
 - `docker-compose.yml` & `docker-compose.asterisk.yml` — Containerized local setup & optional local Asterisk PBX
 - `docs/` — Architecture, telephony, testing lab, and mobile device guides
@@ -151,6 +153,37 @@ flutter run
 
 ---
 
+## Connecting iPhone 13 via Safari (No Native App)
+
+Use `agentvoice-phone-web/` to connect an iPhone 13 (iOS 26 Safari) on your local Wi-Fi network over HTTPS + WSS:
+
+1. **Generate LAN HTTPS Cert & Caddyfile (Windows)**:
+   ```powershell
+   # Optional: install mkcert & caddy if not installed
+   # winget install FiloSottile.mkcert
+   # winget install CaddyServer.Caddy
+   .\scripts\setup-iphone-https.ps1
+   ```
+2. **Trust the Public Root CA on iPhone**:
+   - Transfer `rootCA.pem` from `mkcert -CAROOT` to your iPhone (never share `rootCA-key.pem`).
+   - On iPhone: **Settings → General → VPN & Device Management** (install profile), then **Settings → General → About → Certificate Trust Settings** (enable Full Trust).
+3. **Start the Phone Web PWA & Reverse Proxy**:
+   ```powershell
+   # Terminal 1: Phone PWA (port 3001)
+   cd agentvoice-phone-web
+   npm install
+   npm run dev
+
+   # Terminal 2: Caddy HTTPS proxy (from repo root)
+   caddy run --config docker\caddy\Caddyfile.iphone
+   ```
+4. **Pair & Talk**:
+   - On desktop, open **Telephony → Mobile Devices → Add Mobile Device** (`/telephony/devices/wizard`), select **iPhone Safari Web Gateway**, and generate a 60-second pairing code.
+   - On iPhone Safari, open `https://<YOUR_WINDOWS_LAN_IP>/phone` (or the URL printed by `setup-iphone-https.ps1`), enter the pairing code, grant Microphone permission when prompted, and start an **AgentVoice Internet Voice Call**.
+   - See [docs/iphone-safari-gateway.md](docs/iphone-safari-gateway.md) for full firewall and troubleshooting details.
+
+---
+
 ## Verification & Automated Tests
 
 Run the full backend and frontend test suites from the repository root:
@@ -174,6 +207,7 @@ npm run build:web
 - [docs/testing-lab.md](docs/testing-lab.md) — Testing Lab & AI Client Simulator
 - [docs/live-calls.md](docs/live-calls.md) — Live Calls & real-time WebSocket monitoring
 - [docs/mobile-devices.md](docs/mobile-devices.md) — Android & iPhone Device Gateway
+- [docs/iphone-safari-gateway.md](docs/iphone-safari-gateway.md) — iPhone 13 Safari Web Gateway (HTTPS + WebRTC)
 
 ## License
 

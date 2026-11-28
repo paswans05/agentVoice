@@ -52,6 +52,8 @@ class DeviceCapabilityProfile(BaseModel):
     cellular_audio_bridge_status: str = "CELLULAR_AUDIO_BRIDGE_UNAVAILABLE"
     voip_supported: bool = True
     callkit_supported: bool = False
+    webrtc_supported: bool = False
+    browser: str | None = None
     device_health: bool = True
     ai_call_ready: bool = False
 
@@ -66,6 +68,8 @@ class DeviceHealthSnapshot(BaseModel):
     sim_present: bool | None = None
     carrier_name: str | None = None
     signal_strength_dbm: int | None = None
+    mic_permission: str | None = None
+    page_visible: bool | None = None
     permissions: dict[str, bool] = Field(default_factory=dict)
     last_error: str | None = None
     updated_at: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
@@ -189,5 +193,36 @@ class MobileVoIPSession(BaseModel):
     call_source: str = "AGENTVOICE_VOIP"
     status: str = "ACTIVE"
     provider: str = "asterisk"
+    created_at: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
+    ended_at: datetime | None = None
+
+
+class PairingConfirmRequest(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+
+    device_id: str = Field(min_length=1, max_length=100)
+
+
+class WebRTCSessionCreate(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+
+    device_id: str = Field(min_length=1, max_length=100)
+    agent_id: str = Field(min_length=1, max_length=100)
+    voice_session_id: str | None = Field(default=None, max_length=100)
+    stun_urls: list[str] = Field(default_factory=lambda: ["stun:stun.l.google.com:19302"])
+
+
+class WebRTCSession(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+
+    id: str
+    device_id: str
+    agent_id: str
+    call_session_id: str | None = None
+    voice_session_id: str | None = None
+    call_source: str = "AGENTVOICE_INTERNET_VOICE_CALL"
+    status: str = "SIGNALING"
+    ice_state: str = "new"
+    stun_urls: list[str] = Field(default_factory=list)
     created_at: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
     ended_at: datetime | None = None

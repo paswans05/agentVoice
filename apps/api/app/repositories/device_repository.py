@@ -16,6 +16,7 @@ from app.schemas.devices import (
     DeviceEvent,
     MobileVoIPSession,
     PairingCodePublic,
+    WebRTCSession,
 )
 
 logger = logging.getLogger(__name__)
@@ -24,6 +25,7 @@ DEVICES_STORE = "devices/devices_store.json"
 PAIRING_CODES_STORE = "devices/pairing_codes.json"
 COMMANDS_STORE = "devices/commands_store.json"
 VOIP_SESSIONS_STORE = "devices/voip_sessions_store.json"
+WEBRTC_SESSIONS_STORE = "devices/webrtc_sessions_store.json"
 CREDENTIALS_STORE = "devices/device_credentials.json"
 DEVICE_EVENTS_LOG = "devices/device_events.jsonl"
 
@@ -161,6 +163,23 @@ class DeviceRepository:
                 return session
         items.append(session)
         self._storage.write_json(VOIP_SESSIONS_STORE, [s.model_dump(mode="json") for s in items])
+        return session
+
+    # --- WebRTC Sessions ---
+
+    def list_webrtc_sessions(self) -> list[WebRTCSession]:
+        raw = self._storage.read_json(WEBRTC_SESSIONS_STORE, default=[]) or []
+        return [WebRTCSession.model_validate(r) for r in raw]
+
+    def save_webrtc_session(self, session: WebRTCSession) -> WebRTCSession:
+        items = self.list_webrtc_sessions()
+        for idx, existing in enumerate(items):
+            if existing.id == session.id:
+                items[idx] = session
+                self._storage.write_json(WEBRTC_SESSIONS_STORE, [s.model_dump(mode="json") for s in items])
+                return session
+        items.append(session)
+        self._storage.write_json(WEBRTC_SESSIONS_STORE, [s.model_dump(mode="json") for s in items])
         return session
 
     # --- Events ---

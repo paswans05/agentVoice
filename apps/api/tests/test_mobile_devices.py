@@ -196,3 +196,68 @@ def test_heartbeat_commands_revocation_ws_and_mobile_voip(tmp_path: Path) -> Non
     with pytest.raises(Exception):
         with client.websocket_connect(f"/api/v1/devices/ws?device_id={dev_id}&token={token}") as ws:
             ws.receive_json()
+
+
+def test_safari_pairing_confirm_and_webrtc_signaling(tmp_path: Path) -> None:
+    client = _make_client(tmp_path)
+
+    # 1. Generate 60s pairing code via /devices/pairing
+    code_resp = client.post(
+        "/api/v1/devices/pairing",
+        json={"platform": "ios", "account_id": "op_safari", "ttl_seconds": 60},
+    )
+    assert code_resp.status_code == 201
+    code = code_resp.json()["data"]["code"]
+
+    # 2. Pair iPhone Safari browser
+    paired = client.post(
+        "/api/v1/devices/pair",
+        json={
+            "pairing_code": code,
+            "device_name": "iPhone 13 Safari",
+            "platform": "ios",
+            "platform_version": "iOS 26 (Safari)",
+            "app_version": "0.1.0-safari",
+            "capability_profile": {
+                "platform": "ios",
+                "webrtc_supported": True,
+                "browser": "Safari",
+                "voip_supported": True,
+                "cellular_audio_capture": False,
+                "cellular_audio_injection": False,
+            },
+        },
+    ).json()["data"]
+    dev_id = paired["device"]["id"]
+    token = paired["device_token"]
+
+    # 3. Desktop confirm pairing
+    confirm = client.post("/api/v1/devices/pairing/confirm", json={"device_id": dev_id})
+    assert confirm.status_code == 200
+    assert confirm.json()["data"]["id"] == dev_id
+
+    # 4. Create WebRTC session & verify CallSession integration
+    wrtc = client.post(
+        "/api/v1/webrtc/sessions",
+        headers={"X-Device-Token": token},
+        json={"device_id": dev_id, "agent_id": "agent_demo"},
+    )
+    assert wrtc.status_code == 201
+    wrtc_data = wrtc.json()["data"]
+    assert wrtc_data["call_source"] == "AGENTVOICE_INTERNET_VOICE_CALL"
+    assert wrtc_data["call_session_id"] is not None
+
+    # 5. Authenticated WebRTC WebSocket signaling
+    with client.websocket_connect(f"/api/v1/webrtc/ws?device_id={dev_id}&token={token}") as ws:
+        assert ws.receive_json()["type"] == "SIGNALING_CONNECTED"
+        ws.send_json({"type": "OFFER", "session_id": wrtc_data["id"], "sdp": "v=0..."})
+        assert ws.receive_json()["type"] == "OFFER_ACK"
+        ws.send_json({"type": "ICE_STATE", "session_id": wrtc_data["id"], "state": "connected"})
+        assert ws.receive_json()["state"] == "connected"
+        ws.send_json({"type": "PING"})
+        assert ws.receive_json()["type"] == "PONG"
+
+    # 6. Terminate WebRTC session
+    term = client.post(f"/api/v1/webrtc/sessions/{wrtc_data['id']}/terminate")
+    assert term.status_code == 200
+    assert term.json()["data"]["status"] == "TERMINATED"
