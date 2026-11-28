@@ -21,6 +21,11 @@ import {
 } from "lucide-react";
 import Link from "next/link";
 import { useEffect, useRef, useState } from "react";
+import {
+  ClayAudioVisualizer,
+  ClayCallControl,
+  ClayDialPad,
+} from "@/components/clay";
 import { useAgents } from "@/hooks/use-agents";
 import {
   useDialInternalCall,
@@ -353,35 +358,20 @@ export default function InternalDialerPage() {
             </div>
           )}
 
-          <div className="flex gap-2">
-            <input
-              type="text"
-              value={targetNumber}
-              onChange={(e) => setTargetNumber(e.target.value)}
-              placeholder="Extension (1001, 1002, 600, 700)"
-              className="w-full rounded-lg border border-border bg-background px-3 py-2 text-sm font-mono"
-            />
-            <button
-              type="button"
-              onClick={() => setTargetNumber((p) => p.slice(0, -1))}
-              className="rounded-lg border border-border px-3 text-xs hover:bg-muted"
-            >
-              ⌫
-            </button>
-          </div>
-
-          <div className="grid grid-cols-3 gap-2">
-            {DIAL_KEYS.map((k) => (
-              <button
-                key={k}
-                type="button"
-                onClick={() => handleDialKey(k)}
-                className="rounded-lg border border-border bg-background py-2.5 text-sm font-semibold hover:bg-muted"
-              >
-                {k}
-              </button>
-            ))}
-          </div>
+          <ClayDialPad
+            value={targetNumber}
+            onChange={setTargetNumber}
+            onDigitPress={(d) => {
+              if (sipCallState === "connected") {
+                clientRef.current?.sendDtmf(d);
+              }
+            }}
+            onCall={() => void handlePlaceCall()}
+            onHangup={() => clientRef.current?.hangup()}
+            inCall={sipCallState !== "idle" && sipCallState !== "ended"}
+            canCall={!dialMutation.isPending}
+            placeholder="Extension (1001, 1002, 600, 700)"
+          />
 
           <div className="flex flex-wrap gap-1.5 text-[11px]">
             {[
@@ -394,33 +384,11 @@ export default function InternalDialerPage() {
                 key={p.ext}
                 type="button"
                 onClick={() => setTargetNumber(p.ext)}
-                className="rounded-md border border-border px-2 py-1 hover:bg-muted"
+                className="clay-btn rounded-xl bg-card px-2.5 py-1 text-foreground"
               >
                 {p.label}
               </button>
             ))}
-          </div>
-
-          <div className="flex gap-2">
-            <button
-              type="button"
-              onClick={() => void handlePlaceCall()}
-              disabled={dialMutation.isPending}
-              className="inline-flex flex-1 items-center justify-center gap-1.5 rounded-lg bg-emerald-600 py-2.5 text-xs font-semibold text-white hover:opacity-90 disabled:opacity-50"
-            >
-              <PhoneCall className="h-4 w-4" />
-              {dialMutation.isPending ? "Dialing..." : "Call"}
-            </button>
-            {sipCallState !== "idle" && sipCallState !== "ended" && (
-              <button
-                type="button"
-                onClick={() => clientRef.current?.hangup()}
-                className="inline-flex items-center gap-1 rounded-lg bg-rose-600 px-4 py-2.5 text-xs font-semibold text-white hover:opacity-90"
-              >
-                <PhoneOff className="h-4 w-4" />
-                Hangup
-              </button>
-            )}
           </div>
         </div>
 
@@ -489,25 +457,21 @@ export default function InternalDialerPage() {
                 {sipCallState === "connected" ? formatDuration(durationSec) : sipCallState.toUpperCase()}
               </span>
             </div>
-            <div className="flex flex-wrap gap-2">
-              <button
-                type="button"
+            <div className="grid grid-cols-2 gap-2.5">
+              <ClayCallControl
+                icon={muted ? <MicOff className="h-4 w-4" /> : <Mic className="h-4 w-4" />}
+                label={muted ? "Unmute" : "Mute"}
+                active={muted}
+                disabled={sipCallState !== "connected" && sipCallState !== "held"}
                 onClick={() => setMuted(clientRef.current?.setMuted(!muted) ?? !muted)}
+              />
+              <ClayCallControl
+                icon={held ? <Play className="h-4 w-4" /> : <Pause className="h-4 w-4" />}
+                label={held ? "Resume" : "Hold"}
+                active={held}
                 disabled={sipCallState !== "connected" && sipCallState !== "held"}
-                className="inline-flex items-center gap-1 rounded-lg border border-border px-3 py-1.5 text-xs disabled:opacity-40"
-              >
-                {muted ? <MicOff className="h-3.5 w-3.5 text-rose-500" /> : <Mic className="h-3.5 w-3.5" />}
-                {muted ? "Unmute" : "Mute"}
-              </button>
-              <button
-                type="button"
                 onClick={() => void clientRef.current?.setHold(!held).then(setHeld)}
-                disabled={sipCallState !== "connected" && sipCallState !== "held"}
-                className="inline-flex items-center gap-1 rounded-lg border border-border px-3 py-1.5 text-xs disabled:opacity-40"
-              >
-                {held ? <Play className="h-3.5 w-3.5" /> : <Pause className="h-3.5 w-3.5" />}
-                {held ? "Resume" : "Hold"}
-              </button>
+              />
             </div>
             <div className="space-y-1.5 pt-1">
               <div className="text-[11px] font-medium text-muted-foreground">
@@ -575,20 +539,19 @@ export default function InternalDialerPage() {
                 </option>
               ))}
             </select>
-            <div className="flex items-center gap-2">
+            <div className="space-y-2.5">
               <button
                 type="button"
                 onClick={() => void toggleMicTest()}
-                className="rounded-lg border border-border px-3 py-1.5 text-xs font-medium hover:bg-muted"
+                className="clay-btn w-full rounded-xl bg-card px-3 py-2 text-xs font-medium text-foreground"
               >
                 {micTesting ? "Stop Mic Test" : "Test Microphone"}
               </button>
-              <div className="h-2 flex-1 overflow-hidden rounded-full bg-muted">
-                <div
-                  className="h-full bg-emerald-500 transition-all"
-                  style={{ width: `${micLevel}%` }}
-                />
-              </div>
+              <ClayAudioVisualizer
+                active={micTesting || sipCallState === "connected"}
+                level={micTesting ? micLevel / 100 : 0.45}
+                label="Microphone & call audio level"
+              />
             </div>
           </div>
 

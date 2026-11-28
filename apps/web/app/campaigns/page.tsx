@@ -2,6 +2,7 @@
 
 import { Megaphone, Plus, Radio, Trash2 } from "lucide-react";
 import Link from "next/link";
+import { ClayButton, ClayCard, ClayStatCard } from "@/components/clay";
 import {
   useCampaignOverview,
   useCampaigns,
@@ -31,17 +32,16 @@ export default function CampaignsPage() {
             enforcement.
           </p>
         </div>
-        <Link
-          href="/campaigns/new"
-          className="inline-flex items-center gap-2 rounded-lg bg-primary px-4 py-2 text-sm font-medium text-primary-foreground hover:opacity-90"
-        >
-          <Plus className="h-4 w-4" />
-          Create Campaign
+        <Link href="/campaigns/new">
+          <ClayButton variant="primary">
+            <Plus className="h-4 w-4" />
+            Create Campaign
+          </ClayButton>
         </Link>
       </div>
 
       {/* Telephony Readiness Banner */}
-      <div className="rounded-xl border border-amber-500/30 bg-amber-500/10 p-4 text-xs text-amber-800 dark:text-amber-200">
+      <ClayCard accent="peach" className="text-xs text-[#A66E1B] dark:text-[#F2BE6B]">
         <div className="flex items-center gap-2 font-semibold">
           <Radio className="h-4 w-4" />
           <span>
@@ -55,7 +55,7 @@ export default function CampaignsPage() {
           Dry-run campaigns simulate execution and enforce all consent, suppression, and schedule
           checks locally without placing real phone calls.
         </p>
-      </div>
+      </ClayCard>
 
       {/* Dashboard Stats */}
       <div className="grid gap-3 sm:grid-cols-4 lg:grid-cols-7">
@@ -68,10 +68,7 @@ export default function CampaignsPage() {
           { label: "Completed", value: overview?.completed_campaigns ?? 0 },
           { label: "Failed", value: overview?.failed_campaigns ?? 0 },
         ].map((s) => (
-          <div key={s.label} className="rounded-xl border border-border bg-card p-3.5">
-            <div className="text-[11px] text-muted-foreground">{s.label}</div>
-            <div className="mt-1 text-xl font-semibold">{s.value}</div>
-          </div>
+          <ClayStatCard key={s.label} label={s.label} value={s.value} className="p-3.5" />
         ))}
       </div>
 

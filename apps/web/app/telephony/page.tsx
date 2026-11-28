@@ -27,6 +27,9 @@ import {
 } from "lucide-react";
 
 import {
+  ClayTabs,
+} from "@/components/clay";
+import {
   createInboundRoute,
   createOutboundRoute,
   createSipTrunk,
@@ -219,22 +222,11 @@ export default function TelephonyPage() {
       )}
 
       {/* Navigation Tabs */}
-      <div className="flex flex-wrap gap-1.5 border-b border-border pb-2">
-        {tabs.map((t) => (
-          <button
-            key={t.id}
-            type="button"
-            onClick={() => setTab(t.id)}
-            className={`rounded-lg px-3 py-1.5 text-xs font-medium transition-colors ${
-              tab === t.id
-                ? "bg-primary text-primary-foreground"
-                : "text-muted-foreground hover:bg-muted hover:text-foreground"
-            }`}
-          >
-            {t.label}
-          </button>
-        ))}
-      </div>
+      <ClayTabs
+        tabs={tabs}
+        activeTab={tab}
+        onChange={(id) => setTab(id as TabId)}
+      />
 
       {/* OVERVIEW */}
       {tab === "overview" && (

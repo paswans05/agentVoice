@@ -3,6 +3,7 @@
 import { BookOpen, Database, FileText, Plus, Trash2 } from "lucide-react";
 import Link from "next/link";
 import { useState } from "react";
+import { ClayButton, ClayStatCard } from "@/components/clay";
 import {
   useCreateKnowledgeBase,
   useDeleteKnowledgeBase,
@@ -51,43 +52,42 @@ export default function KnowledgeBasePage() {
             English.
           </p>
         </div>
-        <button
+        <ClayButton
           type="button"
+          variant="primary"
           onClick={() => setShowCreate((v) => !v)}
-          className="inline-flex items-center gap-2 self-start rounded-lg bg-primary px-4 py-2 text-sm font-medium text-primary-foreground hover:opacity-90"
+          className="self-start"
         >
           <Plus className="h-4 w-4" />
           New Knowledge Base
-        </button>
+        </ClayButton>
       </div>
 
       {/* Summary Stats */}
       <div className="grid gap-4 sm:grid-cols-4">
-        <div className="rounded-xl border border-border bg-card p-4">
-          <div className="flex items-center justify-between text-xs text-muted-foreground">
-            <span>Knowledge Bases</span>
-            <BookOpen className="h-4 w-4" />
-          </div>
-          <div className="mt-2 text-2xl font-semibold">{kbs.length}</div>
-        </div>
-        <div className="rounded-xl border border-border bg-card p-4">
-          <div className="flex items-center justify-between text-xs text-muted-foreground">
-            <span>Total Documents</span>
-            <FileText className="h-4 w-4" />
-          </div>
-          <div className="mt-2 text-2xl font-semibold">{totalDocs}</div>
-        </div>
-        <div className="rounded-xl border border-border bg-card p-4">
-          <div className="flex items-center justify-between text-xs text-muted-foreground">
-            <span>Indexed Chunks</span>
-            <Database className="h-4 w-4" />
-          </div>
-          <div className="mt-2 text-2xl font-semibold">{totalChunks}</div>
-        </div>
-        <div className="rounded-xl border border-border bg-card p-4">
-          <div className="text-xs text-muted-foreground">Failed KBs</div>
-          <div className="mt-2 text-2xl font-semibold">{failedKbs}</div>
-        </div>
+        <ClayStatCard
+          label="Knowledge Bases"
+          accent="lavender"
+          icon={<BookOpen className="h-4 w-4" />}
+          value={kbs.length}
+        />
+        <ClayStatCard
+          label="Total Documents"
+          accent="sky"
+          icon={<FileText className="h-4 w-4" />}
+          value={totalDocs}
+        />
+        <ClayStatCard
+          label="Indexed Chunks"
+          accent="mint"
+          icon={<Database className="h-4 w-4" />}
+          value={totalChunks}
+        />
+        <ClayStatCard
+          label="Failed KBs"
+          accent="coral"
+          value={failedKbs}
+        />
       </div>
 
       {showCreate && (

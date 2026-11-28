@@ -1,8 +1,12 @@
 export type StatusTone = "healthy" | "degraded" | "unavailable" | "neutral";
 
 export const STATUS_TONE_CLASSES: Record<StatusTone, string> = {
-  healthy: "bg-emerald-500/15 text-emerald-600 dark:text-emerald-400 border-emerald-500/30",
-  degraded: "bg-amber-500/15 text-amber-600 dark:text-amber-400 border-amber-500/30",
-  unavailable: "bg-rose-500/15 text-rose-600 dark:text-rose-400 border-rose-500/30",
-  neutral: "bg-slate-500/15 text-slate-600 dark:text-slate-400 border-slate-500/30",
+  healthy:
+    "bg-[#42A889]/15 text-[#2C8469] dark:text-[#66CCA9] border-[#42A889]/35 shadow-sm",
+  degraded:
+    "bg-[#E5A64B]/18 text-[#A66E1B] dark:text-[#F2BE6B] border-[#E5A64B]/35 shadow-sm",
+  unavailable:
+    "bg-[#DF6F79]/16 text-[#B64450] dark:text-[#F08C95] border-[#DF6F79]/35 shadow-sm",
+  neutral:
+    "bg-muted/80 text-muted-foreground border-border/70 shadow-sm",
 };

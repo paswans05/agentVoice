@@ -1,11 +1,18 @@
 "use client";
 
-import { BarChart3 } from "lucide-react";
+import { BarChart3, CheckCircle2, PhoneCall, TestTube2 } from "lucide-react";
+import { ClayChartContainer, ClayProgress, ClayStatCard } from "@/components/clay";
 import { useCampaignOverview } from "@/hooks/use-campaigns";
 
 export default function AnalyticsPage() {
   const overviewQuery = useCampaignOverview();
   const data = overviewQuery.data;
+
+  const totalCampaigns = data?.total_campaigns ?? 0;
+  const completedCampaigns = data?.completed_campaigns ?? 0;
+  const realCalls = data?.total_real_calls ?? 0;
+  const dryRunCalls = data?.total_dry_run_calls ?? 0;
+  const totalCalls = Math.max(1, realCalls + dryRunCalls);
 
   return (
     <div className="mx-auto max-w-6xl space-y-6">
@@ -17,25 +24,66 @@ export default function AnalyticsPage() {
       </div>
 
       <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
-        <div className="rounded-xl border border-border bg-card p-5">
-          <div className="flex items-center justify-between text-xs text-muted-foreground">
-            <span>Total Campaigns</span>
-            <BarChart3 className="h-4 w-4" />
+        <ClayStatCard
+          label="Total Campaigns"
+          accent="lavender"
+          icon={<BarChart3 className="h-4 w-4" />}
+          value={totalCampaigns}
+        />
+        <ClayStatCard
+          label="Completed Campaigns"
+          accent="mint"
+          icon={<CheckCircle2 className="h-4 w-4" />}
+          value={completedCampaigns}
+        />
+        <ClayStatCard
+          label="Real Calls Placed"
+          accent="sky"
+          icon={<PhoneCall className="h-4 w-4" />}
+          value={realCalls}
+        />
+        <ClayStatCard
+          label="Dry-Run Simulated Calls"
+          accent="peach"
+          icon={<TestTube2 className="h-4 w-4" />}
+          value={dryRunCalls}
+        />
+      </div>
+
+      <div className="grid gap-4 lg:grid-cols-2">
+        <ClayChartContainer
+          title="Call Execution Breakdown"
+          subtitle="Authorized Real Calls vs Dry-Run Simulations"
+        >
+          <div className="space-y-4">
+            <ClayProgress
+              label={`Real Calls (${realCalls})`}
+              value={realCalls}
+              max={totalCalls}
+              tone="success"
+            />
+            <ClayProgress
+              label={`Dry-Run Simulations (${dryRunCalls})`}
+              value={dryRunCalls}
+              max={totalCalls}
+              tone="warning"
+            />
           </div>
-          <div className="mt-2 text-2xl font-semibold">{data?.total_campaigns ?? 0}</div>
-        </div>
-        <div className="rounded-xl border border-border bg-card p-5">
-          <div className="text-xs text-muted-foreground">Completed Campaigns</div>
-          <div className="mt-2 text-2xl font-semibold">{data?.completed_campaigns ?? 0}</div>
-        </div>
-        <div className="rounded-xl border border-border bg-card p-5">
-          <div className="text-xs text-muted-foreground">Real Calls Placed</div>
-          <div className="mt-2 text-2xl font-semibold">{data?.total_real_calls ?? 0}</div>
-        </div>
-        <div className="rounded-xl border border-border bg-card p-5">
-          <div className="text-xs text-muted-foreground">Dry-Run Simulated Calls</div>
-          <div className="mt-2 text-2xl font-semibold">{data?.total_dry_run_calls ?? 0}</div>
-        </div>
+        </ClayChartContainer>
+
+        <ClayChartContainer
+          title="Campaign Completion Rate"
+          subtitle="Completed vs Total Configured Campaigns"
+        >
+          <div className="space-y-4">
+            <ClayProgress
+              label={`Completed (${completedCampaigns} / ${totalCampaigns})`}
+              value={completedCampaigns}
+              max={Math.max(1, totalCampaigns)}
+              tone="primary"
+            />
+          </div>
+        </ClayChartContainer>
       </div>
     </div>
   );
