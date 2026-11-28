@@ -174,8 +174,14 @@ class AsteriskARIProvider(TelephonyProvider):
             raise TelephonyUnavailableError(msg)
 
         channel_id = f"ast_{uuid.uuid4().hex[:12]}"
-        trunk_prefix = (metadata or {}).get("endpoint_prefix") or "PJSIP"
-        endpoint = f"{trunk_prefix}/{to_number}"
+        meta = metadata or {}
+        trunk_name = meta.get("trunk_name")
+        trunk_prefix = meta.get("endpoint_prefix") or "PJSIP"
+        endpoint = (
+            f"{trunk_prefix}/{to_number}@{trunk_name}"
+            if trunk_name
+            else f"{trunk_prefix}/{to_number}"
+        )
         payload = {
             "endpoint": endpoint,
             "app": self._cfg.ari_app,
@@ -288,6 +294,68 @@ class AsteriskARIProvider(TelephonyProvider):
             "destination_number": (channel.get("dialplan") or {}).get("exten"),
             "digit": raw_event.get("digit"),
         }
+
+    async def check_trunk_endpoint(self, trunk_name: str) -> dict[str, Any]:
+        """Check PJSIP trunk endpoint state & reachability via ARI (OPTIONS/registration)."""
+        started = time.monotonic()
+        try:
+            async with self._client() as client:
+                resp = await client.get(f"/endpoints/PJSIP/{trunk_name}")
+            rtt_ms = int((time.monotonic() - started) * 1000)
+            if resp.status_code in (401, 403):
+                return {
+                    "trunk_name": trunk_name,
+                    "reachable": False,
+                    "options_status": "AUTH_FAILED",
+                    "rtt_ms": rtt_ms,
+                    "message": "Asterisk ARI authentication failed.",
+                }
+            if resp.status_code == 404:
+                return {
+                    "trunk_name": trunk_name,
+                    "reachable": False,
+                    "options_status": "NOT_CONFIGURED",
+                    "rtt_ms": rtt_ms,
+                    "message": f"PJSIP trunk endpoint '{trunk_name}' is not loaded in Asterisk.",
+                }
+            if resp.status_code >= 400:
+                return {
+                    "trunk_name": trunk_name,
+                    "reachable": False,
+                    "options_status": "UNAVAILABLE",
+                    "rtt_ms": rtt_ms,
+                    "message": f"Asterisk ARI returned HTTP {resp.status_code}.",
+                }
+            data = resp.json() if resp.content else {}
+            state = str(data.get("state") or "unknown").lower()
+            online = state == "online"
+            return {
+                "trunk_name": trunk_name,
+                "reachable": online,
+                "state": state,
+                "options_status": "REACHABLE" if online else "UNREACHABLE",
+                "rtt_ms": rtt_ms,
+                "channel_ids": data.get("channel_ids", []),
+                "message": (
+                    f"PJSIP trunk '{trunk_name}' is online."
+                    if online
+                    else f"PJSIP trunk '{trunk_name}' state is '{state}'."
+                ),
+            }
+        except httpx.TimeoutException:
+            return {
+                "trunk_name": trunk_name,
+                "reachable": False,
+                "options_status": "TIMEOUT",
+                "message": "Asterisk ARI trunk check timed out.",
+            }
+        except httpx.RequestError as exc:
+            return {
+                "trunk_name": trunk_name,
+                "reachable": False,
+                "options_status": "NETWORK_ERROR",
+                "message": f"Asterisk ARI unreachable: {type(exc).__name__}",
+            }
 
     async def list_pjsip_endpoints(self) -> list[dict[str, Any]]:
         """Query Asterisk ARI for PJSIP endpoints and registration states."""

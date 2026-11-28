@@ -23,6 +23,12 @@ class TransportProtocol(str, Enum):
     TLS = "TLS"
 
 
+class SipAuthMode(str, Enum):
+    USERPASS_REGISTRATION = "userpass_registration"
+    IP_WHITELIST = "ip_whitelist"
+    DIGEST_CHALLENGE = "digest_challenge"
+
+
 class ProviderConnectionStatus(str, Enum):
     DISCONNECTED = "DISCONNECTED"
     REGISTERING = "REGISTERING"
@@ -55,6 +61,7 @@ class TelephonyProviderCreate(BaseModel):
     port: int = Field(default=8088, ge=1, le=65535)
     use_tls: bool = True
     transport: TransportProtocol = TransportProtocol.TLS
+    auth_mode: SipAuthMode = SipAuthMode.USERPASS_REGISTRATION
     username: str = Field(default="", max_length=120)
     password: str | None = Field(default=None, max_length=255)
     auth_username: str | None = Field(default=None, max_length=120)
@@ -82,6 +89,7 @@ class TelephonyProviderUpdate(BaseModel):
     port: int | None = Field(default=None, ge=1, le=65535)
     use_tls: bool | None = None
     transport: TransportProtocol | None = None
+    auth_mode: SipAuthMode | None = None
     username: str | None = Field(default=None, max_length=120)
     password: str | None = Field(default=None, max_length=255)
     auth_username: str | None = Field(default=None, max_length=120)
@@ -117,6 +125,7 @@ class TelephonyProviderPublic(BaseModel):
     port: int = 8088
     use_tls: bool = True
     transport: TransportProtocol = TransportProtocol.TLS
+    auth_mode: SipAuthMode = SipAuthMode.USERPASS_REGISTRATION
     username: str = ""
     auth_username: str | None = None
     sip_domain: str | None = None
@@ -136,6 +145,7 @@ class TelephonyProviderPublic(BaseModel):
     capabilities: ProviderCapabilitiesSchema = Field(default_factory=ProviderCapabilitiesSchema)
     last_checked_at: datetime | None = None
     last_error: str | None = None
+    credential_rotated_at: datetime | None = None
     created_at: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
     updated_at: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
 
@@ -148,6 +158,7 @@ class SipTrunkCreate(BaseModel):
     host: str = Field(min_length=1, max_length=255)
     port: int = Field(default=5060, ge=1, le=65535)
     transport: TransportProtocol = TransportProtocol.UDP
+    auth_mode: SipAuthMode = SipAuthMode.USERPASS_REGISTRATION
     username: str = Field(default="", max_length=120)
     password: str | None = Field(default=None, max_length=255)
     auth_username: str | None = Field(default=None, max_length=120)
@@ -155,6 +166,8 @@ class SipTrunkCreate(BaseModel):
     outbound_proxy: str | None = Field(default=None, max_length=255)
     caller_id: str = Field(min_length=2, max_length=40)
     register_required: bool = True
+    qualify_frequency_seconds: int = Field(default=60, ge=0, le=3600)
+    options_status: str = "UNKNOWN"
     allowed_destinations: list[str] = Field(default_factory=list)
     codecs: list[str] = Field(default_factory=lambda: ["PCMU", "PCMA"])
     max_concurrent_calls: int = Field(default=5, ge=1, le=200)
@@ -169,6 +182,7 @@ class SipTrunkUpdate(BaseModel):
     host: str | None = Field(default=None, min_length=1, max_length=255)
     port: int | None = Field(default=None, ge=1, le=65535)
     transport: TransportProtocol | None = None
+    auth_mode: SipAuthMode | None = None
     username: str | None = Field(default=None, max_length=120)
     password: str | None = Field(default=None, max_length=255)
     auth_username: str | None = Field(default=None, max_length=120)
@@ -192,12 +206,15 @@ class SipTrunkPublic(BaseModel):
     host: str
     port: int
     transport: TransportProtocol
+    auth_mode: SipAuthMode = SipAuthMode.USERPASS_REGISTRATION
     username: str
     auth_username: str | None = None
     sip_domain: str | None = None
     outbound_proxy: str | None = None
     caller_id: str
     register_required: bool = True
+    qualify_frequency_seconds: int = Field(default=60, ge=0, le=3600)
+    options_status: str = "UNKNOWN"
     allowed_destinations: list[str] = Field(default_factory=list)
     codecs: list[str] = Field(default_factory=lambda: ["PCMU", "PCMA"])
     max_concurrent_calls: int = 5
@@ -381,3 +398,17 @@ class DtmfActionRequest(BaseModel):
     digit: str = Field(min_length=1, max_length=2, pattern=r"^[0-9*#]$")
     action_type: str = Field(default="MENU_SELECT", pattern="^(MENU_SELECT|TRANSFER|OPT_OUT)$")
     target: str | None = Field(default=None, max_length=120)
+
+
+class CredentialRotateRequest(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+
+    password: str | None = Field(default=None, min_length=1, max_length=255)
+    ari_password: str | None = Field(default=None, min_length=1, max_length=255)
+    webhook_secret: str | None = Field(default=None, min_length=1, max_length=255)
+
+
+class ProviderToggleRequest(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+
+    enabled: bool

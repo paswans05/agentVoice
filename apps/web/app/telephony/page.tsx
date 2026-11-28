@@ -45,6 +45,7 @@ import {
   testGsmGateway,
   testSipTrunk,
   testTelephonyProvider,
+  toggleTelephonyProvider,
   updateTelephonySettings,
 } from "@/lib/api-client";
 
@@ -314,14 +315,23 @@ export default function TelephonyPage() {
                 </div>
                 <p className="text-xs text-muted-foreground">{p.message}</p>
                 <div className="text-[11px] text-muted-foreground font-mono">
-                  {p.host ? `${p.host}:${p.port} (${p.transport})` : "Local simulator"} · Caller ID:{" "}
+                  {p.host ? `${p.host}:${p.port} (${p.transport})` : "Local simulator"} · Auth:{" "}
+                  {p.auth_mode || "userpass_registration"} · Caller ID:{" "}
                   {p.caller_id || "—"} · Capabilities: inbound={String(p.capabilities.inbound)},
                   outbound={String(p.capabilities.outbound)}, hold={String(p.capabilities.hold)},
                   transfer={String(p.capabilities.transfer)}, dtmf={String(p.capabilities.dtmf)}
+                  {p.credential_rotated_at ? ` · Rotated: ${p.credential_rotated_at.slice(0, 10)}` : ""}
                 </div>
               </div>
               {p.id !== "dry_run" && (
                 <div className="flex items-center gap-2">
+                  <button
+                    type="button"
+                    onClick={() => void toggleTelephonyProvider(p.id, !p.enabled).then(loadAll)}
+                    className="rounded-lg border border-border px-2.5 py-1.5 text-xs font-medium hover:bg-muted"
+                  >
+                    {p.enabled ? "Disable" : "Enable"}
+                  </button>
                   <button
                     type="button"
                     disabled={busyId === p.id}
@@ -430,10 +440,15 @@ export default function TelephonyPage() {
                       <Network className="h-4 w-4 text-primary" />
                       <span>{t.name}</span>
                       <span className="rounded-full border px-2 py-0.5 text-[11px]">{t.status}</span>
+                      {t.options_status && (
+                        <span className="rounded bg-muted px-2 py-0.5 font-mono text-[10px]">
+                          OPTIONS: {t.options_status}
+                        </span>
+                      )}
                     </div>
                     <div className="text-xs text-muted-foreground font-mono mt-1">
-                      {t.host}:{t.port} ({t.transport}) · Caller ID: {t.caller_id} · Codecs:{" "}
-                      {t.codecs.join(", ")}
+                      {t.host}:{t.port} ({t.transport} · {t.auth_mode || "userpass_registration"}) ·
+                      Caller ID: {t.caller_id} · Codecs: {t.codecs.join(", ")}
                     </div>
                   </div>
                   <div className="flex gap-2">

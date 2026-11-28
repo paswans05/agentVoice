@@ -1,0 +1,81 @@
+; =============================================================================
+; AgentVoice — Asterisk 23 External SIP Trunk Template (Provider-Neutral)
+; =============================================================================
+; Do NOT hardcode production credentials here. Copy/render via environment
+; variables or mount when an authorized SIP trunk provider is provisioned.
+;
+; Supported auth modes:
+;   1. userpass_registration (outbound_auth + registration)
+;   2. ip_whitelist (identify by provider IP/FQDN, no registration)
+;   3. digest_challenge (outbound_auth without registration)
+; =============================================================================
+
+[transport-external-udp]
+type=transport
+protocol=udp
+bind=0.0.0.0:5060
+; Set these when behind NAT on a VPS or home router:
+; external_media_address=${EXTERNAL_MEDIA_ADDRESS}
+; external_signaling_address=${EXTERNAL_SIGNALING_ADDRESS}
+; local_net=10.0.0.0/8
+; local_net=172.16.0.0/12
+; local_net=192.168.0.0/16
+
+[transport-external-tcp]
+type=transport
+protocol=tcp
+bind=0.0.0.0:5060
+
+; [transport-external-tls]
+; type=transport
+; protocol=tls
+; bind=0.0.0.0:5061
+; cert_file=/etc/asterisk/keys/asterisk.crt
+; priv_key_file=/etc/asterisk/keys/asterisk.key
+; method=tlsv1_2
+
+; --- External SIP Trunk Endpoint ---
+[sip-trunk-external]
+type=endpoint
+transport=transport-external-udp
+context=from-trunk-external
+disallow=all
+allow=ulaw,alaw
+outbound_auth=sip-trunk-external-auth
+aors=sip-trunk-external-aor
+from_user=${SIP_TRUNK_USER}
+from_domain=${SIP_TRUNK_FROM_DOMAIN}
+direct_media=no
+rtp_symmetric=yes
+force_rport=yes
+rewrite_contact=yes
+dtmf_mode=rfc4733
+timers=yes
+
+[sip-trunk-external-auth]
+type=auth
+auth_type=userpass
+username=${SIP_TRUNK_AUTH_USER}
+password=${SIP_TRUNK_PASSWORD}
+
+[sip-trunk-external-aor]
+type=aor
+contact=sip:${SIP_TRUNK_HOST}:${SIP_TRUNK_PORT}
+qualify_frequency=60
+qualify_timeout=3.0
+
+; Required for userpass_registration mode; omit for ip_whitelist mode
+[sip-trunk-external-reg]
+type=registration
+transport=transport-external-udp
+outbound_auth=sip-trunk-external-auth
+server_uri=sip:${SIP_TRUNK_HOST}:${SIP_TRUNK_PORT}
+client_uri=sip:${SIP_TRUNK_USER}@${SIP_TRUNK_FROM_DOMAIN}
+retry_interval=60
+expiration=3600
+
+; Required for inbound IP matching (all auth modes)
+[sip-trunk-external-identify]
+type=identify
+endpoint=sip-trunk-external
+match=${SIP_TRUNK_HOST}

@@ -24,6 +24,7 @@ from app.schemas.live_calls import (
     CallSessionType,
 )
 from app.schemas.telephony import (
+    CredentialRotateRequest,
     DtmfActionRequest,
     GsmGatewayCreate,
     GsmGatewayPublic,
@@ -143,6 +144,7 @@ class TelephonyManagementService:
             port=payload.port,
             use_tls=payload.use_tls,
             transport=payload.transport,
+            auth_mode=payload.auth_mode,
             username=payload.username,
             auth_username=payload.auth_username,
             sip_domain=payload.sip_domain,
@@ -179,7 +181,45 @@ class TelephonyManagementService:
         updates["has_password"] = existing.has_password or bool(payload.password)
         updates["has_ari_password"] = existing.has_ari_password or bool(payload.ari_password)
         updates["has_webhook_secret"] = existing.has_webhook_secret or bool(payload.webhook_secret)
+        if payload.password or payload.ari_password or payload.webhook_secret:
+            updates["credential_rotated_at"] = datetime.now(timezone.utc)
         updated = existing.model_copy(update=updates)
+        return self._repo.providers.update(updated) or updated
+
+    def rotate_provider_credentials(
+        self, provider_id: str, payload: CredentialRotateRequest
+    ) -> TelephonyProviderPublic:
+        existing = self.get_provider(provider_id)
+        rotated = False
+        if payload.password:
+            self._repo.vault.set_secret(f"provider:{provider_id}:password", payload.password)
+            rotated = True
+        if payload.ari_password:
+            self._repo.vault.set_secret(f"provider:{provider_id}:ari_password", payload.ari_password)
+            rotated = True
+        if payload.webhook_secret:
+            self._repo.vault.set_secret(f"provider:{provider_id}:webhook_secret", payload.webhook_secret)
+            rotated = True
+        if not rotated:
+            raise TelephonyPolicyError("At least one credential must be provided for rotation.")
+        updated = existing.model_copy(
+            update={
+                "has_password": existing.has_password or bool(payload.password),
+                "has_ari_password": existing.has_ari_password or bool(payload.ari_password),
+                "has_webhook_secret": existing.has_webhook_secret or bool(payload.webhook_secret),
+                "credential_rotated_at": datetime.now(timezone.utc),
+            }
+        )
+        return self._repo.providers.update(updated) or updated
+
+    def set_provider_enabled(self, provider_id: str, enabled: bool) -> TelephonyProviderPublic:
+        existing = self.get_provider(provider_id)
+        updated = existing.model_copy(
+            update={
+                "enabled": enabled,
+                "message": "Enabled by operator." if enabled else "Disabled by operator.",
+            }
+        )
         return self._repo.providers.update(updated) or updated
 
     def delete_provider(self, provider_id: str) -> bool:
@@ -239,12 +279,14 @@ class TelephonyManagementService:
             host=payload.host,
             port=payload.port,
             transport=payload.transport,
+            auth_mode=payload.auth_mode,
             username=payload.username,
             auth_username=payload.auth_username,
             sip_domain=payload.sip_domain,
             outbound_proxy=payload.outbound_proxy,
             caller_id=payload.caller_id,
             register_required=payload.register_required,
+            qualify_frequency_seconds=payload.qualify_frequency_seconds,
             allowed_destinations=payload.allowed_destinations,
             codecs=payload.codecs,
             max_concurrent_calls=payload.max_concurrent_calls,
@@ -274,26 +316,46 @@ class TelephonyManagementService:
         if trunk is None:
             raise TelephonyNotFoundError(f"SIP trunk '{trunk_id}' not found.")
         prov_res = await self.test_provider(trunk.provider_id)
+        options_status = "UNAVAILABLE"
+        trunk_reachable = False
+        message = prov_res.get("message")
+
+        if prov_res.get("connected"):
+            prov = self.get_provider(trunk.provider_id)
+            adapter = self._build_provider_adapter(prov)
+            if hasattr(adapter, "check_trunk_endpoint"):
+                ep_res = await adapter.check_trunk_endpoint(trunk.name)
+                options_status = str(ep_res.get("options_status") or "UNKNOWN")
+                trunk_reachable = bool(ep_res.get("reachable", False))
+                message = ep_res.get("message") or message
+            else:
+                options_status = "REACHABLE"
+                trunk_reachable = True
+
         new_status = (
             ProviderConnectionStatus.CONNECTED
-            if prov_res.get("connected")
+            if (prov_res.get("connected") and trunk_reachable)
             else ProviderConnectionStatus(
-                str(prov_res.get("status") or ProviderConnectionStatus.UNAVAILABLE.value)
+                str(prov_res.get("status") or ProviderConnectionStatus.DISCONNECTED.value)
             )
+            if not prov_res.get("connected")
+            else ProviderConnectionStatus.DISCONNECTED
         )
         self._repo.trunks.update(
             trunk.model_copy(
                 update={
                     "status": new_status,
-                    "last_error": None if prov_res.get("connected") else prov_res.get("message"),
+                    "options_status": options_status,
+                    "last_error": None if new_status == ProviderConnectionStatus.CONNECTED else message,
                 }
             )
         )
         return {
             "trunk_id": trunk_id,
-            "connected": bool(prov_res.get("connected")),
+            "connected": new_status == ProviderConnectionStatus.CONNECTED,
             "status": new_status.value,
-            "message": prov_res.get("message"),
+            "options_status": options_status,
+            "message": message,
         }
 
     # --- Inbound / Outbound Routes ---
@@ -596,11 +658,18 @@ class TelephonyCallRouter:
                 f"Destination '{to_number}' is outside provider allowed_destinations policy."
             )
 
-        # 3. Concurrency check
+        # 3. Concurrency & duplicate active call check
         active = await self._calls.list_sessions(active_only=True)
         tel_active = [c for c in active if c.session_type == CallSessionType.TELEPHONY]
         if len(tel_active) >= min(settings.max_concurrent_calls, prov.max_concurrent_calls):
             raise TelephonyPolicyError("Maximum concurrent telephony call limit reached.")
+        if any(
+            (lead_id and c.lead_id == lead_id and c.campaign_id == campaign_id)
+            for c in tel_active
+        ):
+            raise TelephonyPolicyError(
+                f"Duplicate active call blocked for lead '{lead_id}' in campaign '{campaign_id}'."
+            )
 
         # 4. Lead consent & suppression check (when lead_id is supplied)
         if lead_id and self._eligibility is not None:
@@ -612,12 +681,21 @@ class TelephonyCallRouter:
             if not elig.eligible:
                 raise TelephonyPolicyError(f"Lead '{lead_id}' blocked by eligibility gate: {elig.reason}")
 
+        trunks = [
+            t
+            for t in self._repo.trunks.list_all()
+            if t.provider_id == provider_id and t.enabled
+        ]
+        trunks.sort(key=lambda t: (not t.preferred, t.name))
+        trunk_meta = {"trunk_name": trunks[0].name} if trunks else None
+
         adapter = self._mgmt._build_provider_adapter(prov)
         res = await adapter.initiate_call(
             to_number=to_number,
             agent_id=agent_id,
             campaign_id=campaign_id,
             idempotency_key=idempotency_key,
+            metadata=trunk_meta,
         )
         session = await self._calls.create_session(
             agent_id=agent_id,

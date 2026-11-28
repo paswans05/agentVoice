@@ -947,6 +947,16 @@ export function deleteTelephonyProvider(providerId: string): Promise<{ deleted: 
   );
 }
 
+export function toggleTelephonyProvider(
+  providerId: string,
+  enabled: boolean,
+): Promise<TelephonyProviderRecord> {
+  return apiFetch<TelephonyProviderRecord>(
+    `/api/v1/telephony/providers/${encodeURIComponent(providerId)}/toggle`,
+    { method: "POST", body: JSON.stringify({ enabled }) },
+  );
+}
+
 export function fetchSipTrunks(): Promise<SipTrunkRecord[]> {
   return apiFetch<SipTrunkRecord[]>("/api/v1/telephony/trunks");
 }

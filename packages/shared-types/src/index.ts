@@ -961,6 +961,11 @@ export type TelephonyProviderType =
 
 export type TransportProtocol = "UDP" | "TCP" | "TLS";
 
+export type SipAuthMode =
+  | "userpass_registration"
+  | "ip_whitelist"
+  | "digest_challenge";
+
 export type ProviderConnectionStatus =
   | "DISCONNECTED"
   | "REGISTERING"
@@ -993,6 +998,7 @@ export interface TelephonyProviderRecord {
   port: number;
   use_tls: boolean;
   transport: TransportProtocol;
+  auth_mode?: SipAuthMode;
   username: string;
   auth_username: string | null;
   sip_domain: string | null;
@@ -1012,6 +1018,7 @@ export interface TelephonyProviderRecord {
   capabilities: ProviderCapabilities;
   last_checked_at: string | null;
   last_error: string | null;
+  credential_rotated_at?: string | null;
   created_at: string;
   updated_at: string;
 }
@@ -1023,9 +1030,12 @@ export interface SipTrunkRecord {
   host: string;
   port: number;
   transport: TransportProtocol;
+  auth_mode?: SipAuthMode;
   username: string;
   caller_id: string;
   register_required: boolean;
+  qualify_frequency_seconds?: number;
+  options_status?: string;
   allowed_destinations: string[];
   codecs: string[];
   max_concurrent_calls: number;

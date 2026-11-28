@@ -16,6 +16,7 @@ from app.providers.storage import StorageProvider
 from app.repositories.telephony_repository import TelephonyRepository
 from app.schemas.response import ApiResponse, ok
 from app.schemas.telephony import (
+    CredentialRotateRequest,
     DtmfActionRequest,
     GsmGatewayCreate,
     GsmGatewayPublic,
@@ -26,6 +27,7 @@ from app.schemas.telephony import (
     OutboundRouteCreate,
     OutboundRouteUpdate,
     ProviderConnectionStatus,
+    ProviderToggleRequest,
     SipTrunkCreate,
     SipTrunkPublic,
     SipTrunkUpdate,
@@ -190,6 +192,30 @@ async def telephony_provider_health(
     mgmt: TelephonyManagementService = Depends(get_telephony_mgmt),
 ) -> ApiResponse[dict[str, Any]]:
     return ok(await mgmt.test_provider(provider_id), version=settings.app_version)
+
+
+@router.post("/providers/{provider_id}/rotate-credentials", response_model=ApiResponse[TelephonyProviderPublic])
+async def rotate_provider_credentials(
+    provider_id: str,
+    payload: CredentialRotateRequest,
+    authorization: str | None = Header(default=None),
+    settings: Settings = Depends(get_settings),
+    mgmt: TelephonyManagementService = Depends(get_telephony_mgmt),
+) -> ApiResponse[TelephonyProviderPublic]:
+    _require_auth(settings, authorization)
+    return ok(mgmt.rotate_provider_credentials(provider_id, payload), version=settings.app_version)
+
+
+@router.post("/providers/{provider_id}/toggle", response_model=ApiResponse[TelephonyProviderPublic])
+async def toggle_telephony_provider(
+    provider_id: str,
+    payload: ProviderToggleRequest,
+    authorization: str | None = Header(default=None),
+    settings: Settings = Depends(get_settings),
+    mgmt: TelephonyManagementService = Depends(get_telephony_mgmt),
+) -> ApiResponse[TelephonyProviderPublic]:
+    _require_auth(settings, authorization)
+    return ok(mgmt.set_provider_enabled(provider_id, payload.enabled), version=settings.app_version)
 
 
 # --- SIP Trunks ---

@@ -4,6 +4,7 @@ import { useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import type {
+  SipAuthMode,
   TelephonyProviderRecord,
   TelephonyProviderType,
   TransportProtocol,
@@ -27,6 +28,8 @@ export default function TelephonySetupWizardPage() {
   const [port, setPort] = useState(8088);
   const [useTls, setUseTls] = useState(false);
   const [transport, setTransport] = useState<TransportProtocol>("UDP");
+  const [authMode, setAuthMode] = useState<SipAuthMode>("userpass_registration");
+  const [sipDomain, setSipDomain] = useState("");
   const [ariUsername, setAriUsername] = useState("agentvoice");
   const [ariPassword, setAriPassword] = useState("");
   const [callerId, setCallerId] = useState("");
@@ -62,6 +65,8 @@ export default function TelephonySetupWizardPage() {
           port,
           use_tls: useTls,
           transport,
+          auth_mode: authMode,
+          sip_domain: sipDomain || undefined,
           ari_username: ariUsername || undefined,
           ari_password: ariPassword || undefined,
           caller_id: callerId || undefined,
@@ -214,6 +219,27 @@ export default function TelephonySetupWizardPage() {
                   <option value="TCP">TCP</option>
                   <option value="TLS">TLS</option>
                 </select>
+              </label>
+              <label className="space-y-1">
+                <span>SIP Auth Mode</span>
+                <select
+                  value={authMode}
+                  onChange={(e) => setAuthMode(e.target.value as SipAuthMode)}
+                  className="w-full rounded-md border border-border bg-background px-2.5 py-1.5"
+                >
+                  <option value="userpass_registration">Username + Password + Registration</option>
+                  <option value="ip_whitelist">IP Whitelisting (e.g. Exotel vSIP)</option>
+                  <option value="digest_challenge">SIP Digest Auth (No Registration)</option>
+                </select>
+              </label>
+              <label className="space-y-1">
+                <span>SIP Domain (optional)</span>
+                <input
+                  value={sipDomain}
+                  onChange={(e) => setSipDomain(e.target.value)}
+                  placeholder="pstn.in2.exotel.com"
+                  className="w-full rounded-md border border-border bg-background px-2.5 py-1.5"
+                />
               </label>
               <label className="space-y-1">
                 <span>ARI Username</span>
