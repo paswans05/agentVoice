@@ -17,11 +17,17 @@ venv/
 apps/web/.next/
 apps/web/out/
 apps/web/next-env.d.ts
+agentvoice-phone-web/.next/
+agentvoice-phone-web/out/
+agentvoice-phone-web/next-env.d.ts
 
-# Environment & secrets
+# Environment, secrets & local TLS certificates
 .env
 .env.local
 .env.*.local
+certs/
+*.pem
+*.key
 
 # Local runtime data & downloaded models (keep directory structure via .gitkeep)
 agentvoice-data/**
