@@ -9,6 +9,23 @@ services:
       - "127.0.0.1:8088:8088"
       - "127.0.0.1:5060:5060/udp"
       - "127.0.0.1:5060:5060/tcp"
+    volumes:
+      - ./docker/asterisk/http.conf:/etc/asterisk/http.conf:ro
     environment:
       - ARI_USER=${ASTERISK_ARI_USER:-agentvoice}
       - ARI_PASSWORD=${ASTERISK_ARI_PASSWORD:-change-me-local-dev}
+    entrypoint:
+      - /bin/sh
+      - -c
+      - |
+        cat <<EOF >/etc/asterisk/ari.conf
+        [general]
+        enabled = yes
+        pretty = yes
+
+        [$${ARI_USER}]
+        type = user
+        read_only = no
+        password = $${ARI_PASSWORD}
+        EOF
+        exec /usr/local/bin/entrypoint.sh /usr/sbin/asterisk -vvvdddf -T -W -U asterisk -p
