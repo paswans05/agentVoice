@@ -32,6 +32,11 @@ import type {
   GsmGatewayRecord,
   HealthData,
   InboundRouteRecord,
+  InternalCallMode,
+  InternalCallRecord,
+  InternalCallsHealth,
+  InternalExtension,
+  InternalWebRTCConfig,
   KnowledgeBase,
   KnowledgeDocument,
   Lead,
@@ -1208,6 +1213,54 @@ export function sendDeviceCommand(
     {
       method: "POST",
       body: JSON.stringify({ command_type, payload }),
+    },
+  );
+}
+
+// --- Internal Asterisk 23 Calling ---
+
+export function fetchInternalExtensions(): Promise<InternalExtension[]> {
+  return apiFetch<InternalExtension[]>("/api/v1/internal-calls/extensions");
+}
+
+export function fetchInternalActiveCalls(): Promise<InternalCallRecord[]> {
+  return apiFetch<InternalCallRecord[]>("/api/v1/internal-calls/active");
+}
+
+export function fetchInternalCallHistory(limit = 50): Promise<InternalCallRecord[]> {
+  return apiFetch<InternalCallRecord[]>(`/api/v1/internal-calls/history?limit=${limit}`);
+}
+
+export function fetchInternalCallsHealth(): Promise<InternalCallsHealth> {
+  return apiFetch<InternalCallsHealth>("/api/v1/internal-calls/health");
+}
+
+export function fetchInternalWebRTCConfig(): Promise<InternalWebRTCConfig> {
+  return apiFetch<InternalWebRTCConfig>("/api/v1/internal-calls/webrtc-config");
+}
+
+export function dialInternalCall(payload: {
+  from_extension: string;
+  to_extension: string;
+  mode?: InternalCallMode;
+  agent_id?: string | null;
+  idempotency_key?: string | null;
+}): Promise<InternalCallRecord> {
+  return apiFetch<InternalCallRecord>("/api/v1/internal-calls/dial", {
+    method: "POST",
+    body: JSON.stringify(payload),
+  });
+}
+
+export function hangupInternalCall(
+  callId: string,
+  reason = "operator_hangup",
+): Promise<InternalCallRecord> {
+  return apiFetch<InternalCallRecord>(
+    `/api/v1/internal-calls/${encodeURIComponent(callId)}/hangup`,
+    {
+      method: "POST",
+      body: JSON.stringify({ reason }),
     },
   );
 }

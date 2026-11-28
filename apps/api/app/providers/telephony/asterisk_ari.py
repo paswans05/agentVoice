@@ -288,3 +288,134 @@ class AsteriskARIProvider(TelephonyProvider):
             "destination_number": (channel.get("dialplan") or {}).get("exten"),
             "digit": raw_event.get("digit"),
         }
+
+    async def list_pjsip_endpoints(self) -> list[dict[str, Any]]:
+        """Query Asterisk ARI for PJSIP endpoints and registration states."""
+        try:
+            async with self._client() as client:
+                resp = await client.get("/endpoints/PJSIP")
+        except httpx.RequestError as exc:
+            raise TelephonyUnavailableError(f"Asterisk ARI unreachable: {type(exc).__name__}") from exc
+        if resp.status_code in (401, 403):
+            raise TelephonyAuthError("Asterisk ARI authentication failed.")
+        if resp.status_code >= 400:
+            raise TelephonyProviderError(f"Failed to list PJSIP endpoints (HTTP {resp.status_code}).")
+        data = resp.json()
+        return data if isinstance(data, list) else []
+
+    async def list_active_channels(self) -> list[dict[str, Any]]:
+        """Query Asterisk ARI for currently active channels."""
+        try:
+            async with self._client() as client:
+                resp = await client.get("/channels")
+        except httpx.RequestError as exc:
+            raise TelephonyUnavailableError(f"Asterisk ARI unreachable: {type(exc).__name__}") from exc
+        if resp.status_code in (401, 403):
+            raise TelephonyAuthError("Asterisk ARI authentication failed.")
+        if resp.status_code >= 400:
+            raise TelephonyProviderError(f"Failed to list active ARI channels (HTTP {resp.status_code}).")
+        data = resp.json()
+        return data if isinstance(data, list) else []
+
+    async def originate_internal_call(
+        self,
+        *,
+        from_extension: str,
+        to_extension: str,
+        mode: str = "human",
+        agent_id: str | None = None,
+        channel_id: str | None = None,
+        context: str = "from-internal",
+    ) -> dict[str, Any]:
+        """Originate an internal PJSIP or Stasis AI call via Asterisk ARI."""
+        cid = channel_id or f"int_{uuid.uuid4().hex[:12]}"
+        payload: dict[str, Any] = {
+            "endpoint": f"PJSIP/{from_extension}",
+            "callerId": from_extension,
+            "channelId": cid,
+            "variables": {
+                "AGENTVOICE_MODE": mode,
+                "AGENTVOICE_FROM_EXT": from_extension,
+                "AGENTVOICE_TO_EXT": to_extension,
+                **({"AGENTVOICE_AGENT_ID": agent_id} if agent_id else {}),
+            },
+        }
+        if mode == "ai" or to_extension == "700":
+            payload["app"] = self._cfg.ari_app
+            payload["appArgs"] = f"ai,{from_extension},{agent_id or ''}"
+        else:
+            payload["context"] = context
+            payload["extension"] = to_extension
+            payload["priority"] = 1
+
+        try:
+            async with self._client() as client:
+                resp = await client.post("/channels", json=payload)
+        except httpx.TimeoutException as exc:
+            raise TelephonyUnavailableError("Asterisk ARI request timed out.") from exc
+        except httpx.RequestError as exc:
+            raise TelephonyUnavailableError(f"Asterisk ARI unreachable: {type(exc).__name__}") from exc
+
+        if resp.status_code in (401, 403):
+            raise TelephonyAuthError("Asterisk ARI authentication failed.")
+        if resp.status_code >= 400:
+            raise TelephonyProviderError(f"ARI internal origination failed (HTTP {resp.status_code}).")
+        body = resp.json() if resp.content else {}
+        resolved_id = str(body.get("id") or cid)
+        self._channels[resolved_id] = {
+            "provider_call_id": resolved_id,
+            "from_extension": from_extension,
+            "to_extension": to_extension,
+            "mode": mode,
+            "status": "INITIATING",
+        }
+        return {"channel_id": resolved_id, "raw": body}
+
+    async def create_external_media_bridge(
+        self,
+        *,
+        channel_id: str,
+        external_host: str,
+        format_name: str = "ulaw",
+    ) -> dict[str, str]:
+        """Create a mixing ARI bridge and attach an ExternalMedia UDP channel for AI audio."""
+        bridge_id = f"br_{uuid.uuid4().hex[:12]}"
+        ext_chan_id = f"ext_{uuid.uuid4().hex[:12]}"
+        async with self._client() as client:
+            br_resp = await client.post(
+                "/bridges",
+                params={"type": "mixing", "bridgeId": bridge_id, "name": f"agentvoice-{channel_id}"},
+            )
+            if br_resp.status_code >= 400:
+                raise TelephonyProviderError(f"Failed to create ARI bridge (HTTP {br_resp.status_code}).")
+
+            em_resp = await client.post(
+                "/channels/externalMedia",
+                params={
+                    "app": self._cfg.ari_app,
+                    "external_host": external_host,
+                    "format": format_name,
+                    "channelId": ext_chan_id,
+                    "encapsulation": "rtp",
+                    "transport": "udp",
+                    "direction": "both",
+                },
+            )
+            if em_resp.status_code >= 400:
+                await client.delete(f"/bridges/{bridge_id}")
+                raise TelephonyProviderError(
+                    f"Failed to create ARI ExternalMedia channel (HTTP {em_resp.status_code})."
+                )
+
+            for cid in (channel_id, ext_chan_id):
+                add_resp = await client.post(f"/bridges/{bridge_id}/addChannel", params={"channel": cid})
+                if add_resp.status_code >= 400:
+                    raise TelephonyProviderError(f"Failed to add channel {cid} to bridge {bridge_id}.")
+
+        return {"bridge_id": bridge_id, "external_media_channel_id": ext_chan_id}
+
+    async def destroy_bridge(self, bridge_id: str) -> bool:
+        """Tear down an ARI mixing bridge on call termination."""
+        async with self._client() as client:
+            resp = await client.delete(f"/bridges/{bridge_id}")
+        return resp.status_code < 400

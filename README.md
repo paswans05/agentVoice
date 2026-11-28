@@ -26,6 +26,7 @@ agentVoice is an open-source, self-hosted, local-first AI voice agent platform. 
 - **Campaign Management** (`/campaigns`, `/analytics`, `/call-history`): Outbound campaign wizard, timezone calling windows, retry policies, and local dry-run simulation mode.
 - **Live Calls & Real-Time Monitoring** (`/live-calls`): Real-time WebSocket call monitoring, live transcripts, latency metrics, and capability-gated operator controls.
 - **Telephony Integration** (`/telephony`, `/telephony/setup`): Asterisk ARI + PJSIP adapter, SIP trunks, inbound/outbound routes, authorized GSM gateway adapter, encrypted secret vault, and G.711 PCMU/PCMA media conversion.
+- **Internal SIP/WebRTC Dialer** (`/telephony/dialer`): Built-in browser WebRTC dialer and Asterisk 23 internal extensions (`1001`, `1002`, `1001-ws`, `1002-ws`, `600` Echo test, `700` AI Assistant) with no paid SIP trunk required.
 - **Testing Lab & AI Client Simulator** (`/testing-lab`): 15+ customer personas, text and voice-to-voice simulation, deterministic compliance evaluation, KB/telephony/performance/recovery suites, and autonomous Testing Assistant.
 - **Mobile Device Gateway** (`/telephony/devices`, `agentvoice-mobile/`): Android & iPhone device pairing, revocable per-device credentials, health/capability reporting, and CallKit VoIP companion.
 - **iPhone Safari Web Gateway** (`agentvoice-phone-web/`): Browser-based PWA + WebRTC/WSS gateway for iPhone Safari over local Wi-Fi HTTPS without installing a native iOS app.
@@ -100,6 +101,49 @@ npm run dev:web
 ```
 
 - Web Dashboard: **http://localhost:3000**
+
+### 5. One-Command Docker Setup (Includes Asterisk 23 PBX)
+
+Make sure **Docker Desktop** and **Ollama** (`http://localhost:11434`) are running on your machine, then start the full stack (`api`, `web`, `phone-web`, `asterisk`, `caddy`):
+
+```powershell
+# Build & start all containers (first run or after code changes)
+docker compose up -d --build
+
+# Daily start (without rebuilding)
+docker compose up -d
+
+# Check container status & health
+docker compose ps
+
+# Follow logs (e.g., api and asterisk)
+docker compose logs -f api asterisk
+
+# Stop containers (preserves agentvoice-data/)
+docker compose down
+```
+
+#### Docker Services
+
+| Service | Container | Port | Purpose |
+| --- | --- | --- | --- |
+| `api` | `agentvoice-api` | `127.0.0.1:8000` | FastAPI backend, STT/TTS & AI call bridge (`./agentvoice-data`) |
+| `web` | `agentvoice-web` | `127.0.0.1:3000` | Next.js dashboard & `/telephony/dialer` |
+| `phone-web` | `agentvoice-phone-web` | `127.0.0.1:3001` | iPhone Safari WebRTC PWA |
+| `asterisk` | `agentvoice-asterisk` | `8088`, `5060`, `10000-10018/udp` | Asterisk 23 PBX (ARI, WebRTC WS `/ws`, extensions `1001`/`1002`/`600`/`700`) |
+| `caddy` | `agentvoice-caddy` | `443`, `8443` | HTTPS/WSS reverse proxy for LAN/mobile devices |
+
+#### Verify Docker Stack
+
+- Dashboard: **http://localhost:3000**
+- Internal SIP/WebRTC Dialer: **http://localhost:3000/telephony/dialer** (register `1001-ws` / `1002-ws`, dial `600` Echo or `700` AI Assistant)
+- API Health: **http://localhost:8000/api/v1/health**
+- Asterisk 23 ARI:
+  ```powershell
+  curl.exe -u "agentvoice:change-me-local-dev" http://127.0.0.1:8088/ari/asterisk/info
+  ```
+
+> **Note**: When `api` runs inside Docker, set the Asterisk provider **Host** in **Telephony** to `asterisk` (not `127.0.0.1`). External PSTN numbers remain blocked (`EXTERNAL_TELEPHONY_NOT_CONFIGURED`) until an authorized SIP trunk or GSM gateway is configured.
 
 ---
 
@@ -204,6 +248,10 @@ npm run build:web
 - [docs/installation.md](docs/installation.md) — Detailed installation guide
 - [docs/architecture.md](docs/architecture.md) — System & phase architecture
 - [docs/telephony.md](docs/telephony.md) — Asterisk ARI, SIP trunks, GSM gateways & compliance
+- [docs/internal-calling.md](docs/internal-calling.md) — Asterisk 23 internal SIP/WebRTC calling & extensions
+- [docs/asterisk-23-setup.md](docs/asterisk-23-setup.md) — Windows Docker Asterisk 23 PJSIP, RTP & ARI setup
+- [docs/agentvoice-dialer.md](docs/agentvoice-dialer.md) — Built-in WebRTC browser dialer (`/telephony/dialer`)
+- [docs/ai-call-bridge.md](docs/ai-call-bridge.md) — Bidirectional AI voice bridge over ARI ExternalMedia
 - [docs/testing-lab.md](docs/testing-lab.md) — Testing Lab & AI Client Simulator
 - [docs/live-calls.md](docs/live-calls.md) — Live Calls & real-time WebSocket monitoring
 - [docs/mobile-devices.md](docs/mobile-devices.md) — Android & iPhone Device Gateway

@@ -1305,3 +1305,61 @@ export interface DeviceEventRecord {
   timestamp: string;
   payload: Record<string, unknown>;
 }
+
+// --- Internal Asterisk 23 Calling & WebRTC Dialer ---
+
+export type InternalCallMode = "human" | "ai" | "echo";
+
+export type InternalCallStatus =
+  | "INITIATING"
+  | "RINGING"
+  | "ACTIVE"
+  | "ENDED"
+  | "FAILED";
+
+export interface InternalExtension {
+  extension: string;
+  label: string;
+  transport: string;
+  webrtc_enabled: boolean;
+  registered: boolean;
+  state: string;
+  active_channels: number;
+}
+
+export interface InternalCallRecord {
+  call_id: string;
+  provider_id: string;
+  channel_id: string;
+  live_call_session_id: string | null;
+  from_extension: string;
+  to_extension: string;
+  mode: InternalCallMode;
+  agent_id: string | null;
+  status: InternalCallStatus;
+  is_external: boolean;
+  idempotency_key: string | null;
+  started_at: string;
+  answered_at: string | null;
+  ended_at: string | null;
+  duration_seconds: number;
+  hangup_reason: string | null;
+}
+
+export interface InternalCallsHealth {
+  ari_connected: boolean;
+  provider_id: string | null;
+  provider_name: string | null;
+  asterisk_version: string | null;
+  registered_extensions: number;
+  active_calls: number;
+  external_telephony_configured: boolean;
+  message: string;
+}
+
+export interface InternalWebRTCConfig {
+  ws_url: string;
+  sip_domain: string;
+  extensions: string[];
+  ice_servers: { urls: string[] }[];
+}

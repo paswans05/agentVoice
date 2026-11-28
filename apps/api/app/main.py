@@ -23,6 +23,7 @@ from app.providers.llm import (
     LLMUnavailableError,
 )
 from app.providers.storage import JSONStorageProvider, StoragePathError
+from app.providers.telephony.base import TelephonyUnavailableError
 from app.providers.stt import STTAudioError, STTProviderError, STTUnavailableError
 from app.providers.tts import (
     TTSProviderError,
@@ -33,6 +34,11 @@ from app.providers.tts import (
 from app.repositories.agent_repository import AgentRepositoryError
 from app.repositories.conversation_repository import ConversationRepositoryError
 from app.schemas.response import fail
+from app.services.internal_calls_service import (
+    DuplicateInternalCallError,
+    ExternalTelephonyNotConfiguredError,
+    InternalCallNotFoundError,
+)
 from app.services.agent_service import (
     AgentConflictError,
     AgentLifecycleError,
@@ -310,6 +316,38 @@ def create_app() -> FastAPI:
     ) -> JSONResponse:
         body = fail(code="DEVICE_PAIRING_ERROR", message=str(exc), version=settings.app_version)
         return JSONResponse(status_code=422, content=body.model_dump())
+
+    @app.exception_handler(ExternalTelephonyNotConfiguredError)
+    async def external_telephony_not_configured_handler(
+        request: Request, exc: ExternalTelephonyNotConfiguredError
+    ) -> JSONResponse:
+        body = fail(
+            code="EXTERNAL_TELEPHONY_NOT_CONFIGURED",
+            message=str(exc),
+            version=settings.app_version,
+        )
+        return JSONResponse(status_code=422, content=body.model_dump())
+
+    @app.exception_handler(InternalCallNotFoundError)
+    async def internal_call_not_found_handler(
+        request: Request, exc: InternalCallNotFoundError
+    ) -> JSONResponse:
+        body = fail(code="INTERNAL_CALL_NOT_FOUND", message=str(exc), version=settings.app_version)
+        return JSONResponse(status_code=404, content=body.model_dump())
+
+    @app.exception_handler(DuplicateInternalCallError)
+    async def duplicate_internal_call_handler(
+        request: Request, exc: DuplicateInternalCallError
+    ) -> JSONResponse:
+        body = fail(code="DUPLICATE_INTERNAL_CALL", message=str(exc), version=settings.app_version)
+        return JSONResponse(status_code=409, content=body.model_dump())
+
+    @app.exception_handler(TelephonyUnavailableError)
+    async def telephony_unavailable_handler(
+        request: Request, exc: TelephonyUnavailableError
+    ) -> JSONResponse:
+        body = fail(code="TELEPHONY_UNAVAILABLE", message=str(exc), version=settings.app_version)
+        return JSONResponse(status_code=503, content=body.model_dump())
 
     @app.exception_handler(Exception)
     async def unhandled_exception_handler(request: Request, exc: Exception) -> JSONResponse:

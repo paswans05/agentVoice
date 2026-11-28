@@ -174,6 +174,12 @@ export default function TelephonyPage() {
             Refresh
           </button>
           <Link
+            href="/telephony/dialer"
+            className="inline-flex items-center gap-1.5 rounded-lg border border-border px-3 py-2 text-xs font-medium hover:bg-muted"
+          >
+            Internal Dialer
+          </Link>
+          <Link
             href="/telephony/devices"
             className="inline-flex items-center gap-1.5 rounded-lg border border-border px-3 py-2 text-xs font-medium hover:bg-muted"
           >

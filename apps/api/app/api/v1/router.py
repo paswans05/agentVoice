@@ -7,6 +7,7 @@ from .campaigns import router as campaigns_router
 from .conversations import router as conversations_router
 from .devices import router as devices_router
 from .health import router as health_router
+from .internal_calls import router as internal_calls_router
 from .knowledge import router as knowledge_router
 from .leads import router as leads_router
 from .live_calls import router as live_calls_router
@@ -30,5 +31,6 @@ api_v1_router.include_router(leads_router)
 api_v1_router.include_router(campaigns_router)
 api_v1_router.include_router(live_calls_router)
 api_v1_router.include_router(telephony_router)
+api_v1_router.include_router(internal_calls_router)
 api_v1_router.include_router(testing_router)
 api_v1_router.include_router(devices_router)
