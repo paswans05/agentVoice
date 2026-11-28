@@ -34,7 +34,7 @@ export default function NewCampaignPage() {
   const [notes, setNotes] = useState("");
   const [campaignType, setCampaignType] = useState<CampaignType>("SALES");
   const [agentId, setAgentId] = useState("");
-  const [callingPurpose, setCallingPurpose] = useState("SALES_CALLS");
+  const [callingPurpose, setCallingPurpose] = useState("PRODUCT_INFORMATION");
   const [selectedLeadIds, setSelectedLeadIds] = useState<string[]>([]);
   const [selectedGroupIds, setSelectedGroupIds] = useState<string[]>([]);
   const [timezone, setTimezone] = useState("Asia/Kolkata");
@@ -53,7 +53,7 @@ export default function NewCampaignPage() {
   const leads = leadsQuery.data?.items ?? [];
   const groups = groupsQuery.data ?? [];
   const connectedRealProviders = (providersQuery.data ?? []).filter(
-    (p) => p.enabled && p.status === "CONNECTED" && p.provider_type !== "dry_run",
+    (p) => p.supports_real_calls && p.configured && p.status === "CONNECTED",
   );
   const effectiveTelephonyProvider = dryRun
     ? "dry_run"
@@ -314,7 +314,7 @@ export default function NewCampaignPage() {
                     {connectedRealProviders.length > 0 ? (
                       connectedRealProviders.map((p) => (
                         <option key={p.id} value={p.id}>
-                          {p.name} ({p.provider_type} · {p.caller_id || "no caller ID"})
+                          {p.name} ({p.status})
                         </option>
                       ))
                     ) : (
