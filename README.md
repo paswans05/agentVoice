@@ -1,262 +1,295 @@
-<p align="left">
-  <img src="apps/web/public/logo.png" alt="agentVoice logo" width="48" height="48" />
-</p>
+<div align="center">
+  <img src="apps/web/public/logo.png" alt="AgentVoice Logo" width="180" height="96" />
 
-# agentVoice
+  <h1>AgentVoice</h1>
 
-**Your AI. Your Voice. Your Infrastructure.**
+  <p><strong>Your AI. Your Voice. Your Infrastructure.</strong></p>
 
-agentVoice is an open-source, self-hosted, local-first AI voice agent platform. Build, configure, test, and run conversational AI voice agents on your own hardware without mandatory paid AI APIs, cloud accounts, or external databases.
+  <p>
+    An open-source, self-hosted, local-first AI voice agent platform built for developers, businesses, and AI enthusiasts.
+  </p>
 
-## Core Principles
+  <p>
+    Build, deploy, test, and monitor intelligent voice agents on your own hardware — connecting local LLMs, speech recognition, text-to-speech, knowledge bases, Asterisk/SIP telephony, WebRTC, and mobile gateways from one unified platform.
+  </p>
 
-- **Open Source & Self-Hosted**: Run locally on your PC or on your own VPS.
-- **Privacy-First**: Local AI inference and local JSON/JSONL storage by default (`agentvoice-data/`).
-- **No Mandatory Paid APIs**: Uses local LLMs (Ollama), local STT (`faster-whisper`), local TTS (`piper-tts`), and local embeddings.
-- **Hindi, Hinglish & English**: Built for natural multilingual conversations.
-- **Modular Architecture**: Decoupled Next.js frontend, FastAPI backend, `voice-engine`, and optional `agentvoice-mobile` companion app.
-
-## Implemented Capabilities
-
-- **Agent Management** (`/agents`): Create, edit, duplicate, activate/deactivate, and configure personality, instructions, language, voice, and model settings.
-- **Local LLM & Model Manager** (`/models`): Ollama health checks, model listing/pulling, and multi-turn streaming conversations.
-- **Voice Playground & Speech Pipeline** (`/playground`): Real-time browser microphone + WebSocket voice sessions with VAD, barge-in, `faster-whisper` STT, and `piper-tts`.
-- **Knowledge Base & RAG** (`/knowledge-base`): Upload PDF/DOCX/TXT/MD documents, chunk & index locally, and ground agent replies with source citations.
-- **Leads & Consent Management** (`/leads`): Lead CRUD, groups, CSV import/export (formula-safe), consent tracking, and Do-Not-Contact suppression safeguards.
-- **Campaign Management** (`/campaigns`, `/analytics`, `/call-history`): Outbound campaign wizard, timezone calling windows, retry policies, and local dry-run simulation mode.
-- **Live Calls & Real-Time Monitoring** (`/live-calls`): Real-time WebSocket call monitoring, live transcripts, latency metrics, and capability-gated operator controls.
-- **Telephony Integration** (`/telephony`, `/telephony/setup`): Asterisk ARI + PJSIP adapter, SIP trunks, inbound/outbound routes, authorized GSM gateway adapter, encrypted secret vault, and G.711 PCMU/PCMA media conversion.
-- **Internal SIP/WebRTC Dialer** (`/telephony/dialer`): Built-in browser WebRTC dialer and Asterisk 23 internal extensions (`1001`, `1002`, `1001-ws`, `1002-ws`, `600` Echo test, `700` AI Assistant) with no paid SIP trunk required.
-- **Testing Lab & AI Client Simulator** (`/testing-lab`): 15+ customer personas, text and voice-to-voice simulation, deterministic compliance evaluation, KB/telephony/performance/recovery suites, and autonomous Testing Assistant.
-- **Mobile Device Gateway** (`/telephony/devices`, `agentvoice-mobile/`): Android & iPhone device pairing, revocable per-device credentials, health/capability reporting, and CallKit VoIP companion.
-- **iPhone Safari Web Gateway** (`agentvoice-phone-web/`): Browser-based PWA + WebRTC/WSS gateway for iPhone Safari over local Wi-Fi HTTPS without installing a native iOS app.
-
-> **Note**: Phase 6 (Sales Agent Intelligence) is currently deferred.
-
-## Project Structure
-
-- `apps/web` — Next.js 15 App Router dashboard (TypeScript, Tailwind CSS, TanStack Query)
-- `apps/api` — FastAPI backend (Pydantic v2, AsyncIO, JSON/JSONL `StorageProvider`)
-- `packages/shared-types` — Shared TypeScript API contracts
-- `packages/config` — Shared app and navigation configuration
-- `packages/ui` — Shared UI tokens
-- `voice-engine` — Modular STT, LLM, TTS, VAD, and conversation interfaces
-- `agentvoice-mobile` — Flutter + Kotlin + Swift companion app (requires Flutter/Android/Xcode SDKs)
-- `agentvoice-phone-web` — Next.js mobile-first PWA for iPhone Safari WebRTC voice sessions (no native iOS app required)
-- `agentvoice-data` — Local-first JSON/JSONL data directory
-- `docker-compose.yml` & `docker-compose.asterisk.yml` — Containerized local setup & optional local Asterisk PBX
-- `docs/` — Architecture, telephony, testing lab, and mobile device guides
+  <p>
+    <strong>Self-Hosted · Local-First · Modular · Provider-Neutral · Open Source</strong>
+  </p>
+</div>
 
 ---
 
-## End-to-End Local Setup
+## Table of Contents
+
+- [Overview & Philosophy](#overview--philosophy)
+- [Key Capabilities](#key-capabilities)
+- [Architecture & Stack](#architecture--stack)
+- [Quick Start (Docker & Local Dev)](#quick-start-docker--local-dev)
+- [Testing & Verification](#testing--verification)
+- [Contributing](#contributing)
+- [Development Principles](#development-principles)
+- [Security](#security)
+- [Roadmap](#roadmap)
+- [Documentation](#documentation)
+
+---
+
+## Overview & Philosophy
+
+AgentVoice gives developers and organizations full ownership of their voice AI stack without mandatory proprietary cloud APIs or external databases.
+
+- **Local-First AI**: Ollama (LLM), `faster-whisper` (STT), `piper-tts` (TTS), and local vector RAG.
+- **Zero-Budget Telephony Dev Mode**: Built-in Asterisk 23 internal SIP/WebRTC calling (`1001-ws`, `1002-ws`, `600` Echo, `700` AI Assistant) and dry-run campaign simulation with zero paid trunks required.
+- **Authorized Production Ready**: Provider-neutral SIP trunk architecture (`userpass_registration`, `ip_whitelist`, `digest_challenge`), encrypted secret vault, caller ID validation, and TRAI DLT / consent / DNC safeguards.
+- **Claymorphism Design System**: Soft 3D clay surfaces, light & dark themes, and accessible components across `apps/web`.
+
+---
+
+## Key Capabilities
+
+| Module | Route / Path | Highlights |
+|---|---|---|
+| **Overview & Analytics** | `/`, `/analytics` | Runtime health, CPU/RAM gauges, real vs dry-run metrics |
+| **AI Agents** | `/agents` | Create, duplicate, activate/deactivate, personality, voice, & model config |
+| **Model Manager** | `/models` | Ollama health, model pull/delete, streaming chat |
+| **Voice Playground** | `/playground` | Browser mic + WebSocket voice sessions, VAD, barge-in |
+| **Knowledge Base (RAG)** | `/knowledge-base` | PDF, DOCX, TXT, MD upload, chunking, local vector search, citations |
+| **Leads & Compliance** | `/leads` | Lead CRUD, groups, formula-safe CSV import/export, consent & DNC suppression |
+| **Campaigns** | `/campaigns` | Campaign wizard, timezone windows, retries, dry-run & authorized execution |
+| **Live Calls & History** | `/live-calls`, `/call-history` | WebSocket live monitoring, masked numbers, transcripts, operator controls |
+| **Telephony & Dialer** | `/telephony`, `/telephony/dialer` | Asterisk 23 ARI, PJSIP trunks, WebRTC browser dialer, GSM gateway adapter |
+| **Testing Lab** | `/testing-lab` | 15+ customer personas, text/voice simulation, compliance & perf suites |
+| **Mobile & Safari Gateways** | `/telephony/devices`, `agentvoice-mobile/`, `agentvoice-phone-web/` | Flutter Android/iOS CallKit companion & iPhone Safari WebRTC PWA |
+
+> **Important**: Installing Asterisk alone does not connect to public cellular/PSTN networks. Real external calling requires an authorized SIP trunk or compatible GSM gateway.
+
+---
+
+## Architecture & Stack
+
+```text
+                    AGENTVOICE
+                         |
+          +--------------+--------------+
+          |                             |
+      Next.js 15                    FastAPI
+      Dashboard                      API
+    (Claymorphism)                     |
+          |              +-------------+-------------+
+          |              |             |             |
+       Agents       AI Pipeline    Telephony      Storage
+       Campaigns         |             |             |
+       Leads         +---+---+     Asterisk 23   JSON/JSONL
+       Live Calls    |       |         |         Local Data
+       Dialer      Ollama  Whisper   PJSIP / ARI
+                     |       |         |
+                     +--- Piper --- WebRTC / SIP
+                                       |
+                                Mobile Gateways
+```
+
+| Layer | Technology |
+|---|---|
+| Frontend | Next.js 15, React 19, TypeScript, Tailwind CSS, TanStack Query |
+| Backend | FastAPI, Pydantic v2, AsyncIO, HTTPX |
+| AI / Speech | Ollama, faster-whisper, Piper TTS |
+| Telephony | Asterisk 23, ARI, PJSIP, WebRTC |
+| Storage | Local JSON / JSONL `StorageProvider` (`agentvoice-data/`) |
+| Mobile | Flutter (Riverpod, Dio, Kotlin, Swift CallKit) & Next.js Safari PWA |
+| Infrastructure | Docker Compose, Caddy |
+
+---
+
+## Quick Start (Docker & Local Dev)
 
 ### Prerequisites
 
-- **Node.js** `>= 20` and **npm**
-- **Python** `>= 3.12` and **uv** (`pip install uv` or https://docs.astral.sh/uv/)
-- **Ollama** (https://ollama.com) for local LLM inference
-- **Optional**: Docker (for containerized services or local Asterisk dev PBX)
+- **Git** & **Docker Desktop** (with Docker Compose)
+- **Ollama** ([ollama.com](https://ollama.com/)) running locally (`http://localhost:11434`)
+- **For local dev without Docker**: **Node.js `>= 20`**, **Python `>= 3.12`**, **uv** (`https://docs.astral.sh/uv/`), and **Flutter SDK** (for `agentvoice-mobile/`)
 
 ### 1. Clone & Configure Environment
 
 ```powershell
-# Windows PowerShell (from repo root)
+# Windows PowerShell
+git clone YOUR_GITHUB_REPOSITORY_URL
+cd agentVoice
 Copy-Item .env.example .env
 ```
 
 ```bash
 # Linux / macOS
+git clone YOUR_GITHUB_REPOSITORY_URL
+cd agentVoice
 cp .env.example .env
 ```
 
-### 2. Start Ollama & Pull a Local Model
-
-Make sure Ollama is running (`http://localhost:11434`), then pull a model (for example on 16 GB RAM / 4 GB VRAM hardware):
+Pull a local model with Ollama:
 
 ```bash
 ollama pull qwen2.5:3b
 ```
 
-*(You can also pull models directly from the **Model Manager** page at `/models` once the app is running.)*
+### 2. Run with Docker Compose (Recommended)
 
-### 3. Start the FastAPI Backend
+```bash
+docker compose config --quiet
+docker compose up -d --build
+docker compose ps
+```
 
-```powershell
+- **Dashboard**: `http://localhost:3000`
+- **FastAPI Docs / Health**: `http://localhost:8000/api/v1/health`
+- **Internal WebRTC Dialer**: `http://localhost:3000/telephony/dialer`
+
+> **Docker Tip**: When configuring Asterisk in the Provider Setup Wizard while running inside Docker, use **`asterisk`** as the Host (not `127.0.0.1`) and leave **Use HTTPS / TLS** unchecked for port `8088`.
+
+### 3. Run Locally for Development
+
+```bash
+# Backend (apps/api)
 cd apps/api
 uv sync --extra speech --extra dev
 uv run uvicorn app.main:app --reload --port 8000
-```
 
-- Backend API: **http://localhost:8000**
-- OpenAPI Docs: **http://localhost:8000/docs**
-
-### 4. Start the Next.js Frontend
-
-In a new terminal from the repository root:
-
-```powershell
+# Frontend (repo root)
 npm install
-npm run dev:web
+npm --workspace=@agentvoice/web run dev
 ```
 
-- Web Dashboard: **http://localhost:3000**
-
-### 5. One-Command Docker Setup (Includes Asterisk 23 PBX)
-
-Make sure **Docker Desktop** and **Ollama** (`http://localhost:11434`) are running on your machine, then start the full stack (`api`, `web`, `phone-web`, `asterisk`, `caddy`):
-
-```powershell
-# Build & start all containers (first run or after code changes)
-docker compose up -d --build
-
-# Daily start (without rebuilding)
-docker compose up -d
-
-# Check container status & health
-docker compose ps
-
-# Follow logs (e.g., api and asterisk)
-docker compose logs -f api asterisk
-
-# Stop containers (preserves agentvoice-data/)
-docker compose down
-```
-
-#### Docker Services
-
-| Service | Container | Port | Purpose |
-| --- | --- | --- | --- |
-| `api` | `agentvoice-api` | `127.0.0.1:8000` | FastAPI backend, STT/TTS & AI call bridge (`./agentvoice-data`) |
-| `web` | `agentvoice-web` | `127.0.0.1:3000` | Next.js dashboard & `/telephony/dialer` |
-| `phone-web` | `agentvoice-phone-web` | `127.0.0.1:3001` | iPhone Safari WebRTC PWA |
-| `asterisk` | `agentvoice-asterisk` | `8088`, `5060`, `10000-10018/udp` | Asterisk 23 PBX (ARI, WebRTC WS `/ws`, extensions `1001`/`1002`/`600`/`700`) |
-| `caddy` | `agentvoice-caddy` | `443`, `8443` | HTTPS/WSS reverse proxy for LAN/mobile devices |
-
-#### Verify Docker Stack
-
-- Dashboard: **http://localhost:3000**
-- Internal SIP/WebRTC Dialer: **http://localhost:3000/telephony/dialer** (register `1001-ws` / `1002-ws`, dial `600` Echo or `700` AI Assistant)
-- API Health: **http://localhost:8000/api/v1/health**
-- Asterisk 23 ARI:
-  ```powershell
-  curl.exe -u "agentvoice:change-me-local-dev" http://127.0.0.1:8088/ari/asterisk/info
-  ```
-
-> **Note**: When `api` runs inside Docker, set the Asterisk provider **Host** in **Telephony** to `asterisk` (not `127.0.0.1`). External PSTN numbers remain blocked (`EXTERNAL_TELEPHONY_NOT_CONFIGURED`) until an authorized SIP trunk or GSM gateway is configured.
-
 ---
 
-## End-to-End Usage Walkthrough
+## Testing & Verification
 
-1. **Verify Runtime Health**: Open `/models` to confirm Ollama is connected and `/settings` to verify storage and speech providers.
-2. **Create & Activate an AI Agent**: Go to `/agents/new`, configure personality, system prompt, language (`en`, `hi`, or Hinglish), voice, and local model, then **Activate** the agent.
-3. **Add Company Knowledge (Optional)**: Go to `/knowledge-base`, create a Knowledge Base, upload brochures/FAQs (`.pdf`, `.docx`, `.txt`, `.md`), and assign it to your agent.
-4. **Test Live Voice**: Open `/playground`, select your agent, and talk using your microphone. Open `/live-calls` in another tab to watch live transcripts, AI states, and latency metrics in real time.
-5. **Run Automated Simulations**: Open `/testing-lab`, select your agent, and click **Run Full Test** (or use the **AI Testing Assistant**) to test pricing objections, Hindi/Hinglish, opt-out compliance, and KB grounding.
-6. **Manage Leads & Dry-Run Campaigns**: Import contacts in `/leads/import`, verify consent, and run a local **Dry-Run** campaign in `/campaigns/new` without placing real calls.
-7. **Optional Asterisk/SIP Telephony**: Start local Asterisk via [docker-compose.asterisk.yml](file:///d:/open-source/agentVoice/docker-compose.asterisk.yml) (`127.0.0.1:8088`), then configure and test your connection in `/telephony/setup`. See [docs/telephony.md](docs/telephony.md) for details and compliance requirements.
+Run the test suites before opening a Pull Request:
 
----
-
-## Connecting the Mobile App (`agentvoice-mobile`)
-
-The `agentvoice-mobile/` Flutter companion app connects Android and iPhone devices to your agentVoice backend for device health monitoring, single-use secure pairing, and AgentVoice VoIP endpoints.
-
-### 1. Run the Mobile App
-
-Requires **Flutter SDK `>= 3.3.0`** (plus Android Studio for Android, or macOS + Xcode for iPhone):
-
-```powershell
-cd agentvoice-mobile
-flutter pub get
-flutter run
-```
-
-### 2. Generate a Single-Use Pairing Code
-
-1. In the web dashboard, open **Telephony → Mobile Devices** (`/telephony/devices`) and click **Add Mobile Device** (`/telephony/devices/wizard`).
-2. Select **Android Device Gateway** or **iPhone Companion**.
-3. Click **Generate Single-Use Pairing Code** (valid for 5 minutes).
-
-### 3. Pair from Your Phone
-
-1. If connecting from a **physical phone on the same Wi-Fi**, start the backend bound to all interfaces:
-   ```powershell
-   cd apps/api
-   uv run uvicorn app.main:app --host 0.0.0.0 --port 8000
-   ```
-2. In the **agentVoice** mobile app, enter your **Server URL**:
-   - **Android Emulator**: `http://10.0.2.2:8000`
-   - **iOS Simulator**: `http://127.0.0.1:8000`
-   - **Physical Phone (same Wi-Fi)**: `http://<YOUR_PC_LOCAL_IP>:8000` *(use HTTPS/TLS in production)*
-3. Enter your **Device Name** and the **Single-Use Pairing Code**, then tap **Confirm Pairing**.
-4. Once paired, the app stores its per-device revocable token in Android Keystore / iOS Keychain and syncs heartbeats, battery, network, and capabilities to `/telephony/devices`.
-
-> **Capability Note**: Android and iOS devices report `CELLULAR_AUDIO_BRIDGE_UNAVAILABLE` for standard cellular SIM calls. Actual AI-to-customer voice calls run through your configured **Asterisk/SIP** provider (`/telephony`) or an **AgentVoice VoIP** session (`/api/v1/mobile-voip/sessions`). See [docs/mobile-devices.md](docs/mobile-devices.md).
-
----
-
-## Connecting iPhone 13 via Safari (No Native App)
-
-Use `agentvoice-phone-web/` to connect an iPhone 13 (iOS 26 Safari) on your local Wi-Fi network over HTTPS + WSS:
-
-1. **Generate LAN HTTPS Cert & Caddyfile (Windows)**:
-   ```powershell
-   # Optional: install mkcert & caddy if not installed
-   # winget install FiloSottile.mkcert
-   # winget install CaddyServer.Caddy
-   .\scripts\setup-iphone-https.ps1
-   ```
-2. **Trust the Public Root CA on iPhone**:
-   - Transfer `rootCA.pem` from `mkcert -CAROOT` to your iPhone (never share `rootCA-key.pem`).
-   - On iPhone: **Settings → General → VPN & Device Management** (install profile), then **Settings → General → About → Certificate Trust Settings** (enable Full Trust).
-3. **Start the Phone Web PWA & Reverse Proxy**:
-   ```powershell
-   # Terminal 1: Phone PWA (port 3001)
-   cd agentvoice-phone-web
-   npm install
-   npm run dev
-
-   # Terminal 2: Caddy HTTPS proxy (from repo root)
-   caddy run --config docker\caddy\Caddyfile.iphone
-   ```
-4. **Pair & Talk**:
-   - On desktop, open **Telephony → Mobile Devices → Add Mobile Device** (`/telephony/devices/wizard`), select **iPhone Safari Web Gateway**, and generate a 60-second pairing code.
-   - On iPhone Safari, open `https://<YOUR_WINDOWS_LAN_IP>/phone` (or the URL printed by `setup-iphone-https.ps1`), enter the pairing code, grant Microphone permission when prompted, and start an **AgentVoice Internet Voice Call**.
-   - See [docs/iphone-safari-gateway.md](docs/iphone-safari-gateway.md) for full firewall and troubleshooting details.
-
----
-
-## Verification & Automated Tests
-
-Run the full backend and frontend test suites from the repository root:
-
-```powershell
+```bash
 # Backend tests (apps/api)
 cd apps/api
 uv run --extra speech --extra dev pytest -v
 
-# Frontend typecheck, unit tests, and production build (repo root)
+# Frontend typecheck, unit tests & production build (repo root)
 npm run typecheck:web
 npm run test:web
-npm run build:web
+npm --workspace=@agentvoice/web run build
+
+# Docker Compose validation
+docker compose config --quiet
 ```
+
+Current baseline verified on this branch:
+- **Backend (`pytest`)**: `64 passed`
+- **Frontend (`node --test`)**: `31 passed`
+- **Frontend (`tsc --noEmit` & `next build`)**: `Passed (32 routes)`
+
+---
+
+## Contributing
+
+We welcome contributions from developers, AI engineers, VoIP specialists, UI/UX designers, testers, and technical writers!
+
+### Where You Can Help
+
+- **Backend & AI (`apps/api`)**: FastAPI endpoints, RAG optimizations, VAD/barge-in latency, new STT/TTS/LLM adapters, ARI WebSocket event listeners.
+- **Telephony & VoIP (`docker/asterisk`, `apps/api/app/providers/telephony`)**: PJSIP trunk templates, carrier guides, WebRTC diagnostics, RTP handling.
+- **Frontend & Claymorphism (`apps/web`, `packages/ui`)**: Claymorphism component polish, accessibility (WCAG AA), keyboard navigation, responsive mobile layouts, charts.
+- **Mobile (`agentvoice-mobile`, `agentvoice-phone-web`)**: Flutter CallKit/Android VoIP improvements, Safari PWA WebRTC stability.
+- **Docs & Testing (`docs/`, `tests/`)**: Setup guides, additional pytest/frontend tests, Testing Lab personas.
+
+### Contribution Workflow
+
+1. **Fork & Clone**
+   ```bash
+   git clone https://github.com/YOUR_USERNAME/agentVoice.git
+   cd agentVoice
+   ```
+2. **Create a Feature Branch**
+   ```bash
+   git checkout -b feat/your-feature-name
+   ```
+   Suggested branch prefixes: `feat/`, `fix/`, `docs/`, `test/`, `refactor/`, `style/`, `perf/`, `security/`.
+3. **Make Focused Changes**
+   - Preserve existing API contracts, consent/DNC safeguards, and JSON/JSONL storage compatibility.
+   - Reuse shared components in `apps/web/components/clay/` and existing backend services.
+   - Never commit `.env`, `certs/`, `*.pem`, SIP passwords, ARI secrets, or customer data.
+4. **Verify Locally**
+   - Run `pytest`, `npm run typecheck:web`, `npm run test:web`, and `npm --workspace=@agentvoice/web run build`.
+5. **Commit Using Conventional Commits**
+   ```bash
+   git commit -m "feat: add ARI WebSocket event consumer"
+   ```
+6. **Open a Pull Request**
+   - Describe **what** changed and **why**.
+   - Link related issues.
+   - Include screenshots or screen recordings for UI changes.
+   - List the exact test commands you ran and their results.
+
+### Good First Issues
+
+- Expand frontend component tests in `apps/web/tests/`
+- Add new customer personas & evaluation scenarios to Testing Lab
+- Improve error messages, empty states, and loading skeletons across Claymorphism pages
+- Add carrier-specific PJSIP documentation under `docs/`
+- Improve keyboard navigation & ARIA labels
+
+---
+
+## Development Principles
+
+1. **Local-First**: Prefer self-hosted, locally controlled models and storage.
+2. **Modular & Provider-Neutral**: Keep AI, speech, storage, and SIP adapters decoupled.
+3. **Secure by Default**: Encrypt credentials at rest (`TelephonySecretVault`) and mask PII.
+4. **Honest & Transparent**: Clearly separate implemented, mocked/simulated, and hardware-verified capabilities.
+5. **Testable**: Every new capability should include deterministic unit or integration tests.
+
+---
+
+## Security
+
+Do **not** disclose security vulnerabilities in public issues before maintainers can investigate.
+
+Never commit:
+- `.env` files, API keys, or `AGENTVOICE_SECRET_KEY`
+- SIP passwords or ARI credentials
+- Private TLS certificates (`certs/`, `*.pem`)
+- Customer phone numbers, leads, or call recordings
+
+---
+
+## Roadmap
+
+- [x] Global Claymorphism design system & 22-component library (`apps/web/components/clay/`)
+- [x] Internal Asterisk 23 SIP/WebRTC calling & browser dialer (`/telephony/dialer`)
+- [x] Provider-neutral SIP auth modes (`userpass_registration`, `ip_whitelist`, `digest_challenge`)
+- [ ] Persistent ARI WebSocket event listener in FastAPI lifespan
+- [ ] Additional local LLM, STT, and TTS providers
+- [ ] Verified external PSTN calling with authorized carrier trunks
+- [ ] Human-agent live call handoff & multi-tenant isolation
+- [ ] Plugin and extension ecosystem
+
+---
 
 ## Documentation
 
-- [docs/installation.md](docs/installation.md) — Detailed installation guide
-- [docs/architecture.md](docs/architecture.md) — System & phase architecture
-- [docs/telephony.md](docs/telephony.md) — Asterisk ARI, SIP trunks, GSM gateways & compliance
-- [docs/internal-calling.md](docs/internal-calling.md) — Asterisk 23 internal SIP/WebRTC calling & extensions
-- [docs/asterisk-23-setup.md](docs/asterisk-23-setup.md) — Windows Docker Asterisk 23 PJSIP, RTP & ARI setup
-- [docs/agentvoice-dialer.md](docs/agentvoice-dialer.md) — Built-in WebRTC browser dialer (`/telephony/dialer`)
-- [docs/ai-call-bridge.md](docs/ai-call-bridge.md) — Bidirectional AI voice bridge over ARI ExternalMedia
-- [docs/testing-lab.md](docs/testing-lab.md) — Testing Lab & AI Client Simulator
-- [docs/live-calls.md](docs/live-calls.md) — Live Calls & real-time WebSocket monitoring
-- [docs/mobile-devices.md](docs/mobile-devices.md) — Android & iPhone Device Gateway
-- [docs/iphone-safari-gateway.md](docs/iphone-safari-gateway.md) — iPhone 13 Safari Web Gateway (HTTPS + WebRTC)
+- [Internal Calling Architecture](docs/internal-calling.md)
+- [Asterisk 23 Internal Setup](docs/asterisk-23-setup.md)
+- [Asterisk 23 External SIP Trunk Setup](docs/ASTERISK_23_SIP_SETUP.md)
+- [AgentVoice Browser Dialer](docs/agentvoice-dialer.md)
+- [AI Call Bridge](docs/ai-call-bridge.md)
+- [SIP Integration Audit & Gap Analysis](docs/SIP_INTEGRATION_AUDIT.md)
+- [Exotel SIP Integration Readiness](docs/EXOTEL_INTEGRATION.md)
+- [Real Indian Mobile Calling Setup](docs/REAL_MOBILE_CALLING_SETUP.md)
+
+---
 
 ## License
 
-MIT License — see [LICENSE](LICENSE).
+Please add an explicit open-source `LICENSE` file (e.g., MIT or Apache-2.0) before publishing the repository.
+
+---
+
+<p align="center">
+  <strong>AgentVoice</strong> · <em>Your AI. Your Voice. Your Infrastructure.</em><br />
+  Contributions are welcome!
+</p>
