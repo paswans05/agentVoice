@@ -5,6 +5,7 @@ from __future__ import annotations
 from datetime import datetime
 
 from app.repositories.lead_repository import LeadRepository
+from app.repositories.telephony_repository import TelephonyRepository
 from app.schemas.agent import AgentStatus
 from app.schemas.campaigns import (
     Campaign,
@@ -25,10 +26,12 @@ class CampaignEligibilityService:
         lead_repo: LeadRepository,
         lead_eligibility: LeadEligibilityService,
         agent_service: AgentService,
+        telephony_repo: TelephonyRepository | None = None,
     ) -> None:
         self._lead_repo = lead_repo
         self._lead_eligibility = lead_eligibility
         self._agents = agent_service
+        self._telephony_repo = telephony_repo
 
     async def resolve_target_leads(self, campaign: Campaign) -> list[Lead]:
         all_leads = await self._lead_repo.list_all()
@@ -113,7 +116,9 @@ class CampaignEligibilityService:
             )
 
         # 4. Policy check
-        policy_ok, policy_msg = CampaignPolicyService.check_policy(campaign)
+        policy_ok, policy_msg = CampaignPolicyService.check_policy(
+            campaign, telephony_repo=self._telephony_repo
+        )
         if not policy_ok:
             return CampaignLeadEligibilityDetail(
                 lead_id=lead.id,

@@ -106,8 +106,9 @@ export async function apiFetch<T>(path: string, init?: RequestInit): Promise<T> 
   }
 
   if (!response.ok || !payload.success || payload.data === null) {
+    const detailMsg = (payload as unknown as { detail?: string }).detail;
     throw new ApiClientError(
-      payload.error?.message ?? `Request failed with status ${response.status}`,
+      payload.error?.message ?? detailMsg ?? `Request failed with status ${response.status}`,
       payload.error?.code ?? "REQUEST_FAILED",
       response.status,
     );

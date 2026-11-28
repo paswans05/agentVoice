@@ -3,9 +3,14 @@
 from __future__ import annotations
 
 from datetime import date, datetime, time as dt_time, timedelta, timezone
+from typing import TYPE_CHECKING
 from zoneinfo import ZoneInfo, ZoneInfoNotFoundError
 
 from app.schemas.campaigns import CallOutcome, Campaign
+from app.schemas.telephony import ProviderConnectionStatus
+
+if TYPE_CHECKING:
+    from app.repositories.telephony_repository import TelephonyRepository
 
 
 class CampaignScheduler:
@@ -76,16 +81,47 @@ class CampaignPolicyService:
     """Enforces fail-closed compliance and provider authorization policies."""
 
     @staticmethod
-    def check_policy(campaign: Campaign) -> tuple[bool, str]:
+    def resolve_provider_record(campaign: Campaign, telephony_repo: TelephonyRepository | None):
+        if telephony_repo is None:
+            return None
+        target = campaign.telephony_provider.strip()
+        providers = telephony_repo.providers.list_all()
+        for prov in providers:
+            if prov.id == target or prov.provider_type.value == target.lower():
+                return prov
+        if target.lower() in ("sip", "sip_trunk", "asterisk"):
+            for prov in providers:
+                if prov.enabled and prov.status == ProviderConnectionStatus.CONNECTED:
+                    return prov
+        return None
+
+    @staticmethod
+    def check_policy(
+        campaign: Campaign,
+        *,
+        telephony_repo: TelephonyRepository | None = None,
+    ) -> tuple[bool, str]:
         if not campaign.dry_run and campaign.telephony_provider.strip().lower() == "dry_run":
             return False, "Non-dry-run campaign cannot use the dry_run provider."
         if not campaign.dry_run:
-            # Real telephony requires Phase 9 authorized provider configuration
-            return (
-                False,
-                f"Real outbound calling via '{campaign.telephony_provider}' is blocked until "
-                "an authorized telephony provider is configured (Phase 9).",
-            )
+            prov = CampaignPolicyService.resolve_provider_record(campaign, telephony_repo)
+            if prov is None:
+                return (
+                    False,
+                    f"Real outbound calling via '{campaign.telephony_provider}' is blocked until "
+                    "an authorized telephony provider is configured.",
+                )
+            if not prov.enabled:
+                return False, f"Telephony provider '{prov.name}' is disabled."
+            if prov.status != ProviderConnectionStatus.CONNECTED:
+                return (
+                    False,
+                    f"Telephony provider '{prov.name}' is {prov.status.value} "
+                    "(must be CONNECTED before real outbound calling).",
+                )
+            if not prov.caller_id:
+                return False, f"Telephony provider '{prov.name}' requires an authorized caller_id."
+            return True, f"Authorized telephony provider '{prov.name}' verified."
         return True, "Dry-run policy check passed."
 
 

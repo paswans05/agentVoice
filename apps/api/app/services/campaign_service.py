@@ -7,7 +7,12 @@ from datetime import datetime, timezone
 import logging
 import uuid
 
-from app.providers.telephony import TelephonyProviderFactory
+from app.providers.telephony import (
+    CallInitiationResult,
+    TelephonyProviderError,
+    TelephonyProviderFactory,
+    TelephonyUnavailableError,
+)
 from app.repositories.campaign_repository import (
     CampaignCallRepository,
     CampaignEventRepository,
@@ -15,6 +20,7 @@ from app.repositories.campaign_repository import (
     CampaignRepository,
 )
 from app.repositories.lead_repository import LeadRepository
+from app.repositories.telephony_repository import TelephonyRepository
 from app.schemas.agent import AgentStatus
 from app.schemas.campaigns import (
     CallOutcome,
@@ -40,6 +46,7 @@ from app.services.campaign_policy import (
     CampaignScheduler,
 )
 from app.services.suppression_service import SuppressionService
+from app.services.telephony_service import TelephonyCallRouter, TelephonyPolicyError
 
 logger = logging.getLogger(__name__)
 
@@ -62,12 +69,14 @@ class CampaignService:
         event_repo: CampaignEventRepository,
         eligibility_svc: CampaignEligibilityService,
         agent_svc: AgentService,
+        telephony_repo: TelephonyRepository | None = None,
     ) -> None:
         self._repo = campaign_repo
         self._jobs = job_repo
         self._events = event_repo
         self._eligibility = eligibility_svc
         self._agents = agent_svc
+        self._telephony_repo = telephony_repo
 
     async def _log_event(
         self, campaign_id: str, event_type: str, description: str, actor: str = "operator"
@@ -182,7 +191,9 @@ class CampaignService:
         errors.extend(CampaignScheduler.validate_schedule(campaign))
 
         # Policy / Telephony validation
-        policy_ok, policy_msg = CampaignPolicyService.check_policy(campaign)
+        policy_ok, policy_msg = CampaignPolicyService.check_policy(
+            campaign, telephony_repo=self._telephony_repo
+        )
         if not policy_ok:
             errors.append(policy_msg)
         elif campaign.dry_run:
@@ -275,6 +286,8 @@ class CampaignExecutionService:
         lead_repo: LeadRepository,
         eligibility_svc: CampaignEligibilityService,
         suppression_svc: SuppressionService,
+        telephony_repo: TelephonyRepository | None = None,
+        telephony_router: TelephonyCallRouter | None = None,
     ) -> None:
         self._campaigns = campaign_service
         self._campaign_repo = campaign_repo
@@ -284,6 +297,26 @@ class CampaignExecutionService:
         self._leads = lead_repo
         self._eligibility = eligibility_svc
         self._suppression = suppression_svc
+        self._telephony_repo = telephony_repo
+        self._telephony_router = telephony_router
+
+    def _resolve_provider_and_record(self, campaign: Campaign):
+        if campaign.dry_run:
+            return TelephonyProviderFactory.create("dry_run"), None
+        prov_rec = CampaignPolicyService.resolve_provider_record(campaign, self._telephony_repo)
+        if prov_rec is None:
+            return TelephonyProviderFactory.create(campaign.telephony_provider), None
+        secret = None
+        if self._telephony_repo is not None:
+            secret = self._telephony_repo.vault.get_secret(
+                f"provider:{prov_rec.id}:ari_password"
+            ) or self._telephony_repo.vault.get_secret(f"provider:{prov_rec.id}:password")
+        provider = TelephonyProviderFactory.create(
+            prov_rec.provider_type.value,
+            provider_config=prov_rec,
+            secret=secret,
+        )
+        return provider, prov_rec
 
     async def start_or_resume(
         self,
@@ -297,10 +330,16 @@ class CampaignExecutionService:
             raise CampaignStateError(" ".join(val.errors))
 
         campaign = await self._campaigns.get_campaign(campaign_id)
-        provider = TelephonyProviderFactory.create(campaign.telephony_provider)
+        provider, prov_rec = self._resolve_provider_and_record(campaign)
         ok_cfg, msg_cfg = await provider.validate_configuration()
         if not ok_cfg:
             raise CampaignStateError(msg_cfg)
+        if not campaign.dry_run:
+            conn = await provider.check_connection()
+            if not conn.get("connected"):
+                raise TelephonyUnavailableError(
+                    str(conn.get("message") or "Telephony provider is not reachable.")
+                )
 
         # Enqueue eligible target leads idempotently
         leads = await self._eligibility.resolve_target_leads(campaign)
@@ -354,7 +393,7 @@ class CampaignExecutionService:
     async def _run_worker(self, campaign_id: str, *, bypass_window_for_dry_run: bool = False) -> None:
         try:
             campaign = await self._campaigns.get_campaign(campaign_id)
-            provider = TelephonyProviderFactory.create(campaign.telephony_provider)
+            provider, prov_rec = self._resolve_provider_and_record(campaign)
             sem = asyncio.Semaphore(campaign.maximum_concurrent_calls)
 
             jobs = await self._jobs.list_by_campaign(campaign_id)
@@ -409,18 +448,85 @@ class CampaignExecutionService:
                         job.model_copy(update={"status": CampaignLeadStatus.INITIATING})
                     )
                     started_at = datetime.now(timezone.utc)
-                    res = await provider.initiate_call(
-                        to_number=lead.normalized_phone or "",
-                        agent_id=latest_campaign.agent_id,
-                        campaign_id=latest_campaign.id,
-                        idempotency_key=job.idempotency_key,
-                    )
+                    call_id = f"call_{uuid.uuid4().hex[:12]}"
+                    try:
+                        if not latest_campaign.dry_run and self._telephony_router is not None and prov_rec is not None:
+                            call_sess = await self._telephony_router.initiate_authorized_outbound_call(
+                                provider_id=prov_rec.id,
+                                to_number=lead.normalized_phone or "",
+                                agent_id=latest_campaign.agent_id,
+                                campaign_id=latest_campaign.id,
+                                lead_id=lead.id,
+                                caller_id=prov_rec.caller_id,
+                                calling_purpose=latest_campaign.calling_purpose,
+                                idempotency_key=job.idempotency_key,
+                            )
+                            res = CallInitiationResult(
+                                provider_call_id=call_sess.external_call_id or call_sess.id,
+                                status=call_sess.status.value,
+                                is_dry_run=False,
+                                outcome=CallOutcome.INFORMATION_REQUESTED.value,
+                                summary=f"Outbound call initiated via {prov_rec.name}.",
+                            )
+                            call_id = call_sess.id
+                        else:
+                            res = await provider.initiate_call(
+                                to_number=lead.normalized_phone or "",
+                                agent_id=latest_campaign.agent_id,
+                                campaign_id=latest_campaign.id,
+                                idempotency_key=job.idempotency_key,
+                            )
+                    except (TelephonyProviderError, TelephonyPolicyError, Exception) as exc:
+                        ended_at = datetime.now(timezone.utc)
+                        await self._calls.append(
+                            CampaignCallRecord(
+                                call_id=call_id,
+                                campaign_id=latest_campaign.id,
+                                lead_id=lead.id,
+                                agent_id=latest_campaign.agent_id,
+                                attempt_id=job.id,
+                                provider_id=provider.provider_id,
+                                provider_call_id=None,
+                                is_dry_run=latest_campaign.dry_run,
+                                started_at=started_at,
+                                ended_at=ended_at,
+                                duration_seconds=0,
+                                outcome=CallOutcome.FAILED,
+                                summary=str(exc),
+                            )
+                        )
+                        if CampaignRetryService.should_retry(
+                            latest_campaign, CallOutcome.FAILED, job.attempt_number
+                        ):
+                            retry_at = CampaignRetryService.next_retry_time(
+                                latest_campaign, job.attempt_number
+                            )
+                            await self._jobs.update_job(
+                                job.model_copy(
+                                    update={
+                                        "status": CampaignLeadStatus.RETRY_SCHEDULED,
+                                        "next_retry_at": retry_at,
+                                        "error_message": str(exc),
+                                    }
+                                )
+                            )
+                        else:
+                            await self._jobs.update_job(
+                                job.model_copy(
+                                    update={
+                                        "status": CampaignLeadStatus.FAILED,
+                                        "error_message": str(exc),
+                                    }
+                                )
+                            )
+                        return
+
                     ended_at = datetime.now(timezone.utc)
                     outcome = CallOutcome(res.outcome)
 
                     await self._calls.append(
                         CampaignCallRecord(
-                            call_id=f"call_{uuid.uuid4().hex[:12]}",
+                            call_id=call_id,
                             campaign_id=latest_campaign.id,
                             lead_id=lead.id,
                             agent_id=latest_campaign.agent_id,

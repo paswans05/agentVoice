@@ -569,6 +569,7 @@ class TelephonyCallRouter:
         campaign_id: str,
         lead_id: str | None = None,
         caller_id: str | None = None,
+        calling_purpose: str = "SALES_CALLS",
         idempotency_key: str,
     ) -> CallSession:
         settings = self._repo.get_settings()
@@ -603,7 +604,11 @@ class TelephonyCallRouter:
 
         # 4. Lead consent & suppression check (when lead_id is supplied)
         if lead_id and self._eligibility is not None:
-            elig = self._eligibility.check(lead_id, channel=ConsentChannel.PHONE)
+            elig = await self._eligibility.check_contact_eligibility(
+                lead_id,
+                channel=ConsentChannel.PHONE,
+                purpose=calling_purpose,
+            )
             if not elig.eligible:
                 raise TelephonyPolicyError(f"Lead '{lead_id}' blocked by eligibility gate: {elig.reason}")
 

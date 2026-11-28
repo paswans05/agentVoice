@@ -5,6 +5,7 @@ from fastapi import APIRouter, Depends, HTTPException, Query, status
 from app.api.v1.agents import get_agent_service
 from app.api.v1.health import get_storage
 from app.api.v1.leads import get_eligibility_service, get_suppression_service
+from app.api.v1.telephony import get_telephony_repo, get_telephony_router_svc
 from app.core.config import Settings, get_settings
 from app.providers.storage import StorageProvider
 from app.providers.telephony import TelephonyProviderFactory, TelephonyUnavailableError
@@ -15,6 +16,8 @@ from app.repositories.campaign_repository import (
     CampaignRepository,
 )
 from app.repositories.lead_repository import LeadRepository
+from app.repositories.telephony_repository import TelephonyRepository
+from app.schemas.telephony import ProviderConnectionStatus
 from app.schemas.campaigns import (
     Campaign,
     CampaignAnalytics,
@@ -41,6 +44,7 @@ from app.services.campaign_service import (
     CampaignStateError,
 )
 from app.services.suppression_service import LeadEligibilityService, SuppressionService
+from app.services.telephony_service import TelephonyCallRouter
 
 router = APIRouter(tags=["campaigns"])
 
@@ -49,14 +53,21 @@ def get_campaign_eligibility(
     storage: StorageProvider = Depends(get_storage),
     lead_elig: LeadEligibilityService = Depends(get_eligibility_service),
     agent_svc: AgentService = Depends(get_agent_service),
+    telephony_repo: TelephonyRepository = Depends(get_telephony_repo),
 ) -> CampaignEligibilityService:
-    return CampaignEligibilityService(LeadRepository(storage), lead_elig, agent_svc)
+    return CampaignEligibilityService(
+        LeadRepository(storage),
+        lead_elig,
+        agent_svc,
+        telephony_repo=telephony_repo,
+    )
 
 
 def get_campaign_service(
     storage: StorageProvider = Depends(get_storage),
     elig: CampaignEligibilityService = Depends(get_campaign_eligibility),
     agent_svc: AgentService = Depends(get_agent_service),
+    telephony_repo: TelephonyRepository = Depends(get_telephony_repo),
 ) -> CampaignService:
     return CampaignService(
         CampaignRepository(storage),
@@ -64,6 +75,7 @@ def get_campaign_service(
         CampaignEventRepository(storage),
         elig,
         agent_svc,
+        telephony_repo=telephony_repo,
     )
 
 
@@ -72,6 +84,8 @@ def get_execution_service(
     campaign_svc: CampaignService = Depends(get_campaign_service),
     elig: CampaignEligibilityService = Depends(get_campaign_eligibility),
     sup_svc: SuppressionService = Depends(get_suppression_service),
+    telephony_repo: TelephonyRepository = Depends(get_telephony_repo),
+    telephony_router: TelephonyCallRouter = Depends(get_telephony_router_svc),
 ) -> CampaignExecutionService:
     return CampaignExecutionService(
         campaign_service=campaign_svc,
@@ -82,6 +96,8 @@ def get_execution_service(
         lead_repo=LeadRepository(storage),
         eligibility_svc=elig,
         suppression_svc=sup_svc,
+        telephony_repo=telephony_repo,
+        telephony_router=telephony_router,
     )
 
 
@@ -386,14 +402,22 @@ async def get_call(
 @router.get("/telephony/status", response_model=ApiResponse[dict[str, object]])
 async def telephony_status(
     settings: Settings = Depends(get_settings),
+    telephony_repo: TelephonyRepository = Depends(get_telephony_repo),
 ) -> ApiResponse[dict[str, object]]:
     dry = TelephonyProviderFactory.create("dry_run")
+    providers = telephony_repo.providers.list_all()
+    real_connected = [p for p in providers if p.status == ProviderConnectionStatus.CONNECTED]
     return ok(
         {
-            "real_telephony_configured": False,
+            "real_telephony_configured": len(real_connected) > 0,
+            "connected_providers": [p.id for p in real_connected],
             "dry_run_available": True,
             "default_provider": await dry.check_connection(),
-            "message": "Dry-run mode is available. Real phone calling requires Phase 9 authorized telephony.",
+            "message": (
+                f"{len(real_connected)} authorized telephony provider(s) connected."
+                if real_connected
+                else "Dry-run mode is available. Configure and connect an authorized telephony provider for real calls."
+            ),
         },
         version=settings.app_version,
     )

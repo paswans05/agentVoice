@@ -6,7 +6,7 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useState } from "react";
 import { useAgents } from "@/hooks/use-agents";
-import { useCreateCampaign } from "@/hooks/use-campaigns";
+import { useCreateCampaign, useTelephonyProviders } from "@/hooks/use-campaigns";
 import { useLeadGroups, useLeads } from "@/hooks/use-leads";
 
 const STEPS = ["Info", "AI Agent", "Leads", "Schedule", "Retry", "Review"] as const;
@@ -25,6 +25,7 @@ export default function NewCampaignPage() {
   const agentsQuery = useAgents({ status: "ACTIVE" });
   const leadsQuery = useLeads({ page: 1, page_size: 100 });
   const groupsQuery = useLeadGroups();
+  const providersQuery = useTelephonyProviders();
   const createMutation = useCreateCampaign();
 
   const [step, setStep] = useState(0);
@@ -44,12 +45,19 @@ export default function NewCampaignPage() {
   const [maxAttempts, setMaxAttempts] = useState(3);
   const [retryInterval, setRetryInterval] = useState(30);
   const [dryRun, setDryRun] = useState(true);
+  const [telephonyProvider, setTelephonyProvider] = useState<string>("");
   const [confirmed, setConfirmed] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
   const activeAgents = agentsQuery.data ?? [];
   const leads = leadsQuery.data?.items ?? [];
   const groups = groupsQuery.data ?? [];
+  const connectedRealProviders = (providersQuery.data ?? []).filter(
+    (p) => p.enabled && p.status === "CONNECTED" && p.provider_type !== "dry_run",
+  );
+  const effectiveTelephonyProvider = dryRun
+    ? "dry_run"
+    : telephonyProvider || connectedRealProviders[0]?.id || "sip";
 
   const toggleItem = (list: string[], id: string, setter: (v: string[]) => void) => {
     setter(list.includes(id) ? list.filter((x) => x !== id) : [...list, id]);
@@ -87,7 +95,7 @@ export default function NewCampaignPage() {
         maximum_attempts_per_lead: maxAttempts,
         retry_interval_minutes: retryInterval,
         dry_run: dryRun,
-        telephony_provider: dryRun ? "dry_run" : "sip",
+        telephony_provider: effectiveTelephonyProvider,
       });
       router.push(`/campaigns/${created.id}`);
     } catch (err) {
@@ -119,11 +127,10 @@ export default function NewCampaignPage() {
             key={label}
             type="button"
             onClick={() => setStep(idx)}
-            className={`rounded-lg border px-2.5 py-2 text-xs font-medium ${
-              idx === step
-                ? "border-primary bg-primary/10 text-primary"
-                : "border-border bg-card text-muted-foreground hover:bg-muted"
-            }`}
+            className={`rounded-lg border px-2.5 py-2 text-xs font-medium ${idx === step
+              ? "border-primary bg-primary/10 text-primary"
+              : "border-border bg-card text-muted-foreground hover:bg-muted"
+              }`}
           >
             {idx + 1}. {label}
           </button>
@@ -296,6 +303,35 @@ export default function NewCampaignPage() {
                 />
                 <span>Dry-Run Mode (Local simulation only, no real calls)</span>
               </label>
+              {!dryRun && (
+                <div className="mt-3">
+                  <label className="block text-xs font-medium">Real Telephony Provider</label>
+                  <select
+                    value={effectiveTelephonyProvider}
+                    onChange={(e) => setTelephonyProvider(e.target.value)}
+                    className="mt-1 w-full rounded-lg border border-border bg-background px-3 py-2 text-xs"
+                  >
+                    {connectedRealProviders.length > 0 ? (
+                      connectedRealProviders.map((p) => (
+                        <option key={p.id} value={p.id}>
+                          {p.name} ({p.provider_type} · {p.caller_id || "no caller ID"})
+                        </option>
+                      ))
+                    ) : (
+                      <option value="sip">No connected real provider (will require setup)</option>
+                    )}
+                  </select>
+                  {connectedRealProviders.length === 0 && (
+                    <p className="mt-1 text-[11px] text-amber-600 dark:text-amber-400">
+                      Configure and test a real provider in{" "}
+                      <Link href="/telephony" className="underline">
+                        Telephony
+                      </Link>{" "}
+                      before activating.
+                    </p>
+                  )}
+                </div>
+              )}
             </div>
             <div>
               <label className="block text-xs font-medium">Start Time (HH:MM)</label>
