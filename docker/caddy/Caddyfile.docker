@@ -1,0 +1,24 @@
+# Unified Docker Caddyfile for Desktop (:443) and iPhone Safari Gateway (:8443)
+:443 {
+    tls /etc/caddy/certs/agentvoice-lan.pem /etc/caddy/certs/agentvoice-lan-key.pem
+
+    handle /api/* {
+        reverse_proxy api:8000
+    }
+
+    handle {
+        reverse_proxy web:3000
+    }
+}
+
+:8443 {
+    tls /etc/caddy/certs/agentvoice-lan.pem /etc/caddy/certs/agentvoice-lan-key.pem
+
+    handle /api/* {
+        reverse_proxy api:8000
+    }
+
+    handle {
+        reverse_proxy phone-web:3001
+    }
+}

@@ -4,13 +4,18 @@ services:
       context: .
       dockerfile: docker/api.Dockerfile
     container_name: agentvoice-api
+    restart: unless-stopped
     ports:
-      - "8000:8000"
+      - "127.0.0.1:8000:8000"
     environment:
-      APP_ENV: development
+      APP_ENV: ${APP_ENV:-development}
       STORAGE_BACKEND: json
       DATA_DIR: /data/agentvoice-data
-      CORS_ORIGINS: http://localhost:3000,http://127.0.0.1:3000
+      CORS_ORIGINS: ${CORS_ORIGINS:-http://localhost:3000,http://127.0.0.1:3000}
+      OLLAMA_BASE_URL: ${OLLAMA_BASE_URL:-http://host.docker.internal:11434}
+      AGENTVOICE_SECRET_KEY: ${AGENTVOICE_SECRET_KEY:-change-me-in-production}
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
     volumes:
       - ./agentvoice-data:/data/agentvoice-data
     healthcheck:
@@ -24,10 +29,67 @@ services:
       context: .
       dockerfile: docker/web.Dockerfile
     container_name: agentvoice-web
+    restart: unless-stopped
     ports:
-      - "3000:3000"
+      - "127.0.0.1:3000:3000"
     environment:
       NEXT_PUBLIC_API_URL: http://localhost:8000
     depends_on:
       api:
         condition: service_healthy
+
+  phone-web:
+    build:
+      context: .
+      dockerfile: docker/phone-web.Dockerfile
+    container_name: agentvoice-phone-web
+    restart: unless-stopped
+    ports:
+      - "127.0.0.1:3001:3001"
+    depends_on:
+      api:
+        condition: service_healthy
+
+  asterisk:
+    image: andrius/asterisk:latest
+    container_name: agentvoice-asterisk
+    restart: unless-stopped
+    ports:
+      - "127.0.0.1:8088:8088"
+      - "127.0.0.1:5060:5060/udp"
+      - "127.0.0.1:5060:5060/tcp"
+    volumes:
+      - ./docker/asterisk/http.conf:/etc/asterisk/http.conf:ro
+    environment:
+      ARI_USER: ${ASTERISK_ARI_USER:-agentvoice}
+      ARI_PASSWORD: ${ASTERISK_ARI_PASSWORD:-change-me-local-dev}
+    entrypoint:
+      - /bin/sh
+      - -c
+      - |
+        cat <<EOF >/etc/asterisk/ari.conf
+        [general]
+        enabled = yes
+        pretty = yes
+
+        [$${ARI_USER}]
+        type = user
+        read_only = no
+        password = $${ARI_PASSWORD}
+        EOF
+        exec /usr/local/bin/entrypoint.sh /usr/sbin/asterisk -vvvdddf -T -W -U asterisk -p
+
+  caddy:
+    image: caddy:2-alpine
+    container_name: agentvoice-caddy
+    restart: unless-stopped
+    ports:
+      - "443:443"
+      - "8443:8443"
+    volumes:
+      - ./docker/caddy/Caddyfile.docker:/etc/caddy/Caddyfile:ro
+      - ./certs:/etc/caddy/certs:ro
+    depends_on:
+      - api
+      - web
+      - phone-web
